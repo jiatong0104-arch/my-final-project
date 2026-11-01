@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+
+{% block title %}刪除老師檔案{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-xl px-4 pt-12 sm:px-6">
+  <div class="rounded-3xl border-2 border-teacher bg-white p-7 sm:p-9">
+    <h1 class="font-hand text-4xl font-bold">確定要刪除老師檔案嗎？</h1>
+    <p class="mt-3 text-soft">刪除後，學生就找不到你了。你的帳號會保留，仍然可以找老師，也可以重新建立老師檔案。</p>
+
+    <div class="mt-6 rounded-2xl bg-teacher-light p-5">
+      <p class="font-bold text-teacher-dark">這些資料會一起刪除，而且無法復原：</p>
+      <ul class="mt-3 space-y-1.5 text-ink">
+        <li>老師檔案：一句話介紹、自我介紹、學歷、可教科目、時薪</li>
+        <li>收到的邀請：等待回覆 {{ pending_count }} 筆、已接受 {{ accepted_count }} 筆</li>
+        <li>學生給你的評價 {{ review_count }} 則</li>
+        <li>聊天室訊息 {{ message_count }} 則（學生那邊也會看不到）</li>
+      </ul>
+    </div>
+
+    <form method="post" class="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      {% csrf_token %}
+      <a href="{% url 'tutors:profile-edit' %}" class="rounded-xl px-5 py-3 text-center font-medium text-soft hover:text-ink">取消，回到編輯</a>
+      <button type="submit" class="rounded-xl bg-teacher px-6 py-3 font-bold text-white hover:bg-teacher-dark">確定刪除</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

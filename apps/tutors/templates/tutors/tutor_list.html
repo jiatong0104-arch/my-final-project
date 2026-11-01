@@ -1,0 +1,114 @@
+{% extends "core/base.html" %}
+
+{% block title %}找老師{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 pt-10 sm:px-6">
+  <h1 class="font-hand text-4xl font-bold">找老師</h1>
+  <p class="mt-2 text-soft">用科目、年級、地區和時薪篩選，找到最適合你的老師。</p>
+
+  <div class="mt-8 grid gap-8 lg:grid-cols-[17rem_1fr]">
+    {# ───── 篩選條件（查詢參數） ───── #}
+    <form method="get" action="{% url 'tutors:list' %}" class="form-body h-fit rounded-2xl border border-grid bg-white p-5 lg:sticky lg:top-24" aria-label="篩選老師">
+      <p>
+        <label for="q">關鍵字</label>
+        <input type="text" id="q" name="q" value="{{ params.q }}" placeholder="老師名字、學校、科目">
+      </p>
+      <p>
+        <label for="level">年級</label>
+        <select id="level" name="level">
+          <option value="">全部年級</option>
+          {% for value, label in levels %}
+            <option value="{{ value }}" {% if params.level == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <p>
+        <label for="subject">科目</label>
+        <select id="subject" name="subject">
+          <option value="">全部科目</option>
+          {% regroup subjects by get_level_display as subject_groups %}
+          {% for group in subject_groups %}
+            <optgroup label="{{ group.grouper }}">
+              {% for subject in group.list %}
+                <option value="{{ subject.id }}" {% if params.subject == subject.id|stringformat:"s" %}selected{% endif %}>{{ subject }}</option>
+              {% endfor %}
+            </optgroup>
+          {% endfor %}
+        </select>
+      </p>
+      <p>
+        <label for="city">縣市</label>
+        <select id="city" name="city">
+          <option value="">全部縣市</option>
+          {% for value, label in cities %}
+            <option value="{{ value }}" {% if params.city == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </p>
+      <fieldset class="mb-4">
+        <legend class="mb-2 font-bold">上課方式</legend>
+        <div class="flex flex-wrap gap-2">
+          <label class="!inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-grid px-3 py-1.5 font-normal has-[:checked]:border-student has-[:checked]:bg-student-light"><input type="radio" name="mode" value="" {% if not params.mode %}checked{% endif %} class="accent-student"> 不限</label>
+          <label class="!inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-grid px-3 py-1.5 font-normal has-[:checked]:border-student has-[:checked]:bg-student-light"><input type="radio" name="mode" value="online" {% if params.mode == "online" %}checked{% endif %} class="accent-student"> 線上</label>
+          <label class="!inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-grid px-3 py-1.5 font-normal has-[:checked]:border-student has-[:checked]:bg-student-light"><input type="radio" name="mode" value="in_person" {% if params.mode == "in_person" %}checked{% endif %} class="accent-student"> 面授</label>
+        </div>
+      </fieldset>
+      <p>
+        <label for="max_rate">時薪上限</label>
+        <input type="number" id="max_rate" name="max_rate" value="{{ params.max_rate }}" min="0" step="50" placeholder="例如 800">
+      </p>
+      <input type="hidden" name="sort" value="{{ params.sort }}">
+      <button type="submit" class="w-full rounded-xl bg-student px-4 py-2.5 font-bold text-white hover:bg-student-dark">套用篩選</button>
+      {% if active_filters %}
+        <a href="{% url 'tutors:list' %}" class="mt-3 block text-center text-sm text-soft underline hover:text-ink">清除所有條件</a>
+      {% endif %}
+    </form>
+
+    {# ───── 結果 ───── #}
+    <section aria-live="polite">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-soft">找到 <strong class="text-ink">{{ page.paginator.count }}</strong> 位老師</p>
+        <form method="get" class="flex items-center gap-2">
+          {% for key, value in params.items %}
+            {% if key != "sort" and value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}
+          {% endfor %}
+          <label for="sort" class="text-sm text-soft">排序</label>
+          <select id="sort" name="sort" data-autosubmit class="rounded-lg border border-grid bg-white px-3 py-1.5">
+            {% for value, label in sort_options %}
+              <option value="{{ value }}" {% if params.sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit" class="rounded-lg border px-2 py-1">排序</button></noscript>
+        </form>
+      </div>
+
+      {% if page.object_list %}
+        <div class="mt-5 grid gap-4 md:grid-cols-2">
+          {% for tutor in page.object_list %}
+            {% include "tutors/_tutor_card.html" %}
+          {% endfor %}
+        </div>
+
+        {% if page.paginator.num_pages > 1 %}
+          <nav class="mt-8 flex items-center justify-center gap-2" aria-label="分頁">
+            {% if page.has_previous %}
+              <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.previous_page_number }}" class="rounded-lg border border-grid bg-white px-3 py-1.5 hover:border-student">上一頁</a>
+            {% endif %}
+            <span class="px-3 text-soft">第 {{ page.number }} / {{ page.paginator.num_pages }} 頁</span>
+            {% if page.has_next %}
+              <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page.next_page_number }}" class="rounded-lg border border-grid bg-white px-3 py-1.5 hover:border-student">下一頁</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="mt-5 rounded-2xl border-2 border-dashed border-grid bg-white/70 px-6 py-14 text-center">
+          <p class="font-hand text-2xl font-bold">沒有符合條件的老師</p>
+          <p class="mt-2 text-soft">試著放寬時薪上限，或改選其他縣市、上課方式。</p>
+          <a href="{% url 'tutors:list' %}" class="mt-5 inline-block rounded-full bg-student px-5 py-2 font-bold text-white">查看所有老師</a>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

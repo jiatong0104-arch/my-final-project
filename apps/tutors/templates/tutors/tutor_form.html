@@ -1,0 +1,137 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}{% if is_create %}成為老師{% else %}編輯老師檔案{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl px-4 pt-10 sm:px-6">
+  <div class="flex items-center gap-4">
+    <span class="tianzige grid h-14 w-14 shrink-0 place-items-center text-teacher"><span class="font-hand text-3xl font-bold">教</span></span>
+    <div>
+      <h1 class="font-hand text-4xl font-bold">{% if is_create %}建立老師檔案{% else %}編輯老師檔案{% endif %}</h1>
+      <p class="mt-1 text-soft">{% if is_create %}填好之後，學生就能在「找老師」看到你。{% else %}修改後會立刻更新在你的公開檔案上。{% endif %}</p>
+    </div>
+  </div>
+
+  <form method="post" class="form-body mt-8 rounded-3xl border border-grid bg-white p-6 sm:p-8" novalidate>
+    {% csrf_token %}
+    {% include "core/includes/form_errors.html" %}
+
+    {# ───── 基本介紹 ───── #}
+    <h2 class="mb-4 border-b border-grid pb-2 text-lg font-bold text-teacher">基本介紹</h2>
+    {% include "core/includes/field.html" with field=form.headline %}
+
+    <div class="mb-5">
+      <div class="mb-1.5 flex items-baseline justify-between gap-3">
+        <label for="{{ form.bio.id_for_label }}" class="!mb-0 font-bold">{{ form.bio.label }}</label>
+        <span id="bio-count" class="text-sm text-soft" aria-live="polite"></span>
+      </div>
+      {{ form.bio }}
+      <span class="help">說明你的教學經驗、上課方式、適合什麼樣的學生。最多 5000 字。</span>
+      {% for error in form.bio.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+    </div>
+
+    {# ───── 學歷 ───── #}
+    <h2 class="mb-4 mt-8 border-b border-grid pb-2 text-lg font-bold text-teacher">學歷</h2>
+    <div class="grid gap-x-5 sm:grid-cols-2">
+      <div>
+        {% include "core/includes/field.html" with field=form.school_choice %}
+        <div data-other-for="{{ form.school_choice.id_for_label }}">
+          {% include "core/includes/field.html" with field=form.school_other hide_optional=True %}
+        </div>
+      </div>
+      <div>
+        {% include "core/includes/field.html" with field=form.department_choice %}
+        <div data-other-for="{{ form.department_choice.id_for_label }}">
+          {% include "core/includes/field.html" with field=form.department_other hide_optional=True %}
+        </div>
+      </div>
+    </div>
+    <div class="sm:w-1/2 sm:pr-2.5">
+      {% include "core/includes/field.html" with field=form.degree %}
+    </div>
+
+    {# ───── 可教科目 ───── #}
+    <h2 class="mb-1 mt-8 border-b border-grid pb-2 text-lg font-bold text-teacher">可教科目</h2>
+    <p class="mb-4 mt-3 text-sm text-soft">勾選你能教的科目。清單上沒有的，勾「其他」自己填。</p>
+    <fieldset class="mb-5">
+      <legend class="sr-only">可教科目</legend>
+      <div class="space-y-5">
+        {% for level in form.subjects_by_level %}
+          <div>
+            <p class="mb-2 text-sm font-bold text-soft">{{ level.label }}</p>
+            <div class="flex flex-wrap gap-2">
+              {% for item in level.items %}
+                <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-grid px-3 py-1.5 has-[:checked]:border-teacher has-[:checked]:bg-teacher-light">
+                  <input type="checkbox" name="subjects" value="{{ item.subject.pk }}" {% if item.checked %}checked{% endif %} class="accent-teacher">
+                  {{ item.subject.name }}
+                </label>
+              {% endfor %}
+              <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-soft/50 px-3 py-1.5 text-soft has-[:checked]:border-teacher has-[:checked]:bg-teacher-light has-[:checked]:text-ink">
+                <input type="checkbox" data-other-toggle="{{ level.other.id_for_label }}" {% if level.other.value %}checked{% endif %} class="accent-teacher">
+                其他
+              </label>
+            </div>
+            <div data-other-box="{{ level.other.id_for_label }}" class="mt-2">
+              <label for="{{ level.other.id_for_label }}" class="sr-only">{{ level.other.label }}</label>
+              {{ level.other }}
+              {% for error in level.other.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% for error in form.subjects.errors %}<p class="mt-3 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+    </fieldset>
+
+    {# ───── 上課條件 ───── #}
+    <h2 class="mb-4 mt-8 border-b border-grid pb-2 text-lg font-bold text-teacher">上課條件</h2>
+    <fieldset class="mb-5">
+      <legend class="mb-1.5 font-bold">時薪區間（新台幣）</legend>
+      <div class="flex items-start gap-3">
+        <div class="flex-1">
+          <label for="{{ form.hourly_rate_min.id_for_label }}" class="sr-only">最低時薪</label>
+          {{ form.hourly_rate_min }}
+          {% for error in form.hourly_rate_min.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+        </div>
+        <span class="pt-3 text-soft">到</span>
+        <div class="flex-1">
+          <label for="{{ form.hourly_rate_max.id_for_label }}" class="sr-only">最高時薪</label>
+          {{ form.hourly_rate_max }}
+          {% for error in form.hourly_rate_max.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+      <span class="help">不同科目、年級收費不同時，填最低和最高；收費固定就填一樣的數字。</span>
+    </fieldset>
+    <div class="grid gap-x-5 sm:grid-cols-2">
+      {% include "core/includes/field.html" with field=form.years_of_experience %}
+      {% include "core/includes/field.html" with field=form.city %}
+      {% include "core/includes/field.html" with field=form.teaching_mode %}
+    </div>
+    {% include "core/includes/field.html" with field=form.contact_info %}
+
+    <label class="mt-2 flex cursor-pointer items-start gap-3 rounded-xl bg-paper p-4">
+      <input type="checkbox" name="is_accepting" {% if form.is_accepting.value %}checked{% endif %} class="mt-1 h-5 w-5 accent-teacher">
+      <span><span class="block font-bold">開放接案</span><span class="text-sm text-soft">取消勾選後，你不會出現在老師列表，也不會收到新邀請。</span></span>
+    </label>
+
+    <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <a href="{% if tutor %}{% url 'tutors:detail' tutor.id %}{% else %}{% url 'core:home' %}{% endif %}" class="rounded-xl px-5 py-3 text-center font-medium text-soft hover:text-ink">取消</a>
+      <button type="submit" class="rounded-xl bg-teacher px-6 py-3 font-bold text-white hover:bg-teacher-dark">{% if is_create %}建立老師檔案{% else %}儲存變更{% endif %}</button>
+    </div>
+  </form>
+
+  {% if tutor %}
+    <div class="mt-8 flex flex-col gap-3 rounded-3xl border-2 border-dashed border-teacher/40 bg-white/70 p-6 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="font-bold">刪除老師檔案</p>
+        <p class="text-sm text-soft">不想再接家教時可以刪除。只想暫時休息的話，取消勾選「開放接案」就好。</p>
+      </div>
+      <a href="{% url 'tutors:profile-delete' %}" class="shrink-0 rounded-xl border-2 border-teacher px-5 py-2.5 text-center font-bold text-teacher hover:bg-teacher-light">刪除老師檔案</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'tutors/js/tutor_form.js' %}"></script>
+{% endblock %}

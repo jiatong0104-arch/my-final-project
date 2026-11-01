@@ -1,0 +1,25 @@
+{% load ui %}
+<a href="{% url 'tutors:detail' tutor.id %}" class="group flex h-full flex-col rounded-2xl border border-grid bg-white p-5 transition-colors hover:border-student">
+  <div class="flex items-start gap-4">
+    <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full font-hand text-2xl font-bold {{ tutor.id|avatar_color }}">{{ tutor.initial }}</span>
+    <div class="min-w-0">
+      <p class="text-lg font-bold group-hover:text-student">{{ tutor.display_name }}</p>
+      <p class="truncate text-sm text-soft">{{ tutor.education }}</p>
+      {% if tutor.review_count %}
+        <p class="mt-1 text-sm"><span class="text-amber-500" aria-hidden="true">{{ tutor.avg_rating|stars }}</span> <span class="font-bold">{{ tutor.avg_rating|floatformat:1 }}</span> <span class="text-soft">（{{ tutor.review_count }} 則評價）</span></p>
+      {% else %}
+        <p class="mt-1 text-sm text-soft">尚無評價</p>
+      {% endif %}
+    </div>
+  </div>
+  <p class="mt-4 font-hand text-lg leading-snug">{{ tutor.headline }}</p>
+  <ul class="mt-3 flex flex-wrap gap-1.5">
+    {% for subject in tutor.subjects.all %}
+      <li class="rounded-md bg-student-light px-2 py-0.5 text-sm text-student-dark">{{ subject }}</li>
+    {% endfor %}
+  </ul>
+  <div class="mt-auto flex items-end justify-between gap-2 pt-5 text-sm text-soft">
+    <span>{{ tutor.get_city_display }}，{{ tutor.get_teaching_mode_display }}</span>
+    <span class="whitespace-nowrap"><span class="text-xl font-bold text-ink">{{ tutor.rate_display }}</span> / 小時</span>
+  </div>
+</a>

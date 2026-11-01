@@ -1,0 +1,93 @@
+{% extends "core/base.html" %}
+{% load ui %}
+
+{% block title %}{{ tutor.display_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 pt-8 sm:px-6">
+  <a href="{% url 'tutors:list' %}" class="text-sm font-medium text-soft hover:text-student">← 回到老師列表</a>
+
+  <div class="mt-5 grid gap-6 lg:grid-cols-[1fr_20rem]">
+    {# ───── 主要資訊 ───── #}
+    <article class="rounded-3xl border border-grid bg-white p-6 sm:p-8">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <span class="grid h-20 w-20 shrink-0 place-items-center rounded-full font-hand text-4xl font-bold {{ tutor.id|avatar_color }}">{{ tutor.initial }}</span>
+        <div>
+          <h1 class="font-hand text-4xl font-bold">{{ tutor.display_name }}</h1>
+          <p class="mt-1 text-soft">{{ tutor.education }}，教學 {{ tutor.years_of_experience }} 年</p>
+          {% if tutor.review_count %}
+            <p class="mt-1"><span class="text-amber-500" aria-hidden="true">{{ tutor.avg_rating|stars }}</span> <strong>{{ tutor.avg_rating|floatformat:1 }}</strong> <span class="text-soft">（{{ tutor.review_count }} 則評價）</span></p>
+          {% endif %}
+        </div>
+      </div>
+
+      <p class="mt-6 font-hand text-2xl leading-snug"><span class="marker">{{ tutor.headline }}</span></p>
+
+      <h2 class="mt-8 font-bold">可教科目</h2>
+      <ul class="mt-3 flex flex-wrap gap-2">
+        {% for subject in tutor.subjects.all %}
+          <li class="rounded-lg bg-student-light px-3 py-1 text-student-dark">{{ subject }}</li>
+        {% endfor %}
+      </ul>
+
+      <h2 class="mt-8 font-bold">關於我的教學</h2>
+      <div class="mt-3 max-w-prose leading-8 text-ink/90">{{ tutor.bio|linebreaks }}</div>
+    </article>
+
+    {# ───── 側欄：價格與行動 ───── #}
+    <aside class="h-fit space-y-4 lg:sticky lg:top-24">
+      <div class="rounded-3xl border-2 border-ink bg-white p-6">
+        <p><span class="text-3xl font-bold">{{ tutor.rate_display }}</span> <span class="text-soft">/ 小時</span></p>
+        <dl class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between gap-4"><dt class="text-soft">地區</dt><dd class="font-medium">{{ tutor.get_city_display }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-soft">上課方式</dt><dd class="font-medium">{{ tutor.get_teaching_mode_display }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-soft">接案狀態</dt><dd class="font-medium {% if tutor.is_accepting %}text-emerald-700{% else %}text-soft{% endif %}">{% if tutor.is_accepting %}開放接案中{% else %}暫停接案{% endif %}</dd></div>
+        </dl>
+
+        <div class="mt-6">
+          {% if is_owner %}
+            <p class="rounded-xl bg-teacher-light px-4 py-3 text-sm text-teacher-dark">這是你的老師檔案，學生看到的就是這個樣子。</p>
+            <a href="{% url 'tutors:profile-edit' %}" class="mt-3 block rounded-xl bg-teacher px-4 py-3 text-center font-bold text-white hover:bg-teacher-dark">編輯老師檔案</a>
+          {% elif accepted_request %}
+            <div class="rounded-xl bg-emerald-50 px-4 py-3 text-sm">
+              <p class="font-bold text-emerald-800">老師已接受你的邀請</p>
+              <p class="mt-1 break-all text-emerald-900">{{ tutor.contact_info }}</p>
+            </div>
+            <a href="{% url 'matching:chat' accepted_request.id %}" class="mt-3 block rounded-xl bg-ink px-4 py-3 text-center font-bold text-white hover:bg-student-dark">開啟聊天室</a>
+          {% elif pending_request %}
+            <p class="rounded-xl bg-student-light px-4 py-3 text-sm text-student-dark">你已送出邀請，正在等老師回覆。</p>
+            <a href="{% url 'matching:list' %}" class="mt-3 block text-center text-sm font-medium text-student underline">到我的媒合查看</a>
+          {% elif tutor.is_accepting %}
+            <a href="{% url 'matching:create' tutor.id %}" class="block rounded-xl bg-student px-4 py-3 text-center font-bold text-white hover:bg-student-dark">邀請這位老師</a>
+            {% if not user.is_authenticated %}<p class="mt-2 text-center text-xs text-soft">需要先登入或註冊</p>{% endif %}
+          {% else %}
+            <p class="rounded-xl bg-paper px-4 py-3 text-sm text-soft">這位老師目前暫停接案。</p>
+          {% endif %}
+        </div>
+      </div>
+      <p class="px-2 text-xs leading-5 text-soft">老師接受邀請後，你才會看到老師的聯絡方式；老師也才會看到你的。</p>
+    </aside>
+  </div>
+
+  {# ───── 評價 ───── #}
+  <section class="mt-10" aria-labelledby="reviews-title">
+    <h2 id="reviews-title" class="font-hand text-3xl font-bold">學生評價</h2>
+    {% if reviews %}
+      <ul class="mt-5 space-y-4">
+        {% for review in reviews %}
+          <li class="rounded-2xl border border-grid bg-white p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="font-bold">{{ review.match_request.student|user_display }} <span class="font-normal text-soft">上過 {{ review.match_request.subject }}</span></p>
+              <p class="text-amber-500" aria-label="{{ review.rating }} 星">{{ review.rating|stars }}</p>
+            </div>
+            <p class="mt-3 leading-7">{{ review.comment }}</p>
+            <p class="mt-2 text-xs text-soft">{{ review.created_at|date:"Y 年 n 月 j 日" }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="mt-4 rounded-2xl border-2 border-dashed border-grid bg-white/70 px-5 py-8 text-center text-soft">還沒有學生評價。上過課的學生可以在「我的媒合」留下評價。</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
