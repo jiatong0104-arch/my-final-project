@@ -1,0 +1,25 @@
+{% extends "account/_auth_layout.html" %}
+{% block title %}註冊{% endblock %}
+{% block auth_content %}
+  {% with to_teacher="/tutors/me/create/" %}
+  {% if redirect_field_value == to_teacher %}
+    <span class="tianzige grid h-12 w-12 place-items-center text-teacher"><span class="font-hand text-2xl font-bold">教</span></span>
+    <h1 class="mt-4 font-hand text-4xl font-bold">註冊成為老師</h1>
+    <p class="mt-2 text-soft">先建立帳號，下一步就填寫你的老師檔案。</p>
+  {% else %}
+    <h1 class="font-hand text-4xl font-bold">建立帳號</h1>
+    <p class="mt-2 text-soft">一個帳號就能找老師；之後想教學，也能隨時建立老師檔案。</p>
+  {% endif %}
+  {% endwith %}
+  <form method="post" action="{% url 'account_signup' %}" class="form-body mt-7" novalidate>
+    {% csrf_token %}
+    {% include "core/includes/form_errors.html" %}
+    {% for field in form.visible_fields %}
+      {% include "core/includes/field.html" %}
+    {% endfor %}
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+    {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+    <button type="submit" class="w-full rounded-xl bg-ink px-5 py-3 font-bold text-white hover:bg-student-dark">註冊</button>
+  </form>
+  <p class="mt-6 text-center text-sm text-soft">已經有帳號？<a href="{% url 'account_login' %}{% if redirect_field_value %}?{{ redirect_field_name }}={{ redirect_field_value|urlencode }}{% endif %}" class="font-bold text-student underline">登入</a></p>
+{% endblock %}

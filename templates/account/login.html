@@ -1,0 +1,16 @@
+{% extends "account/_auth_layout.html" %}
+{% block title %}登入{% endblock %}
+{% block auth_content %}
+  <h1 class="font-hand text-4xl font-bold">登入</h1>
+  <p class="mt-2 text-soft">登入後就能邀請老師，或管理你的老師檔案。</p>
+  <form method="post" action="{% url 'account_login' %}" class="form-body mt-7" novalidate>
+    {% csrf_token %}
+    {% include "core/includes/form_errors.html" %}
+    {% include "core/includes/field.html" with field=form.login %}
+    {% include "core/includes/field.html" with field=form.password %}
+    <label class="mb-5 flex items-center gap-2 text-sm"><input type="checkbox" name="remember" class="accent-student"> 記住我</label>
+    {% if redirect_field_value %}<input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">{% endif %}
+    <button type="submit" class="w-full rounded-xl bg-ink px-5 py-3 font-bold text-white hover:bg-student-dark">登入</button>
+  </form>
+  <p class="mt-6 text-center text-sm text-soft">還沒有帳號？<a href="{% url 'account_signup' %}{% if redirect_field_value %}?{{ redirect_field_name }}={{ redirect_field_value|urlencode }}{% endif %}" class="font-bold text-student underline">註冊</a></p>
+{% endblock %}
