@@ -1,0 +1,5 @@
+<span class="rounded-full px-3 py-1 text-sm font-bold
+  {% if match.status == 'pending' %}bg-marker/60 text-ink
+  {% elif match.status == 'accepted' %}bg-emerald-100 text-emerald-800
+  {% elif match.status == 'rejected' %}bg-teacher-light text-teacher-dark
+  {% else %}bg-slate-100 text-soft{% endif %}">{{ match.get_status_display }}</span>

@@ -1,0 +1,138 @@
+{% extends "core/base.html" %}
+{% load ui %}
+
+{% block title %}我的媒合{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-4xl px-4 pt-10 sm:px-6">
+  <h1 class="font-hand text-4xl font-bold">我的媒合</h1>
+
+  {% if tutor %}
+    <nav class="mt-6 flex gap-2 border-b-2 border-grid" aria-label="切換邀請類型">
+      <a href="?tab=received" class="-mb-0.5 border-b-2 px-4 py-2 font-bold {% if tab == 'received' %}border-teacher text-teacher{% else %}border-transparent text-soft hover:text-ink{% endif %}" {% if tab == 'received' %}aria-current="page"{% endif %}>
+        我收到的邀請
+        {% if received_pending %}<span class="ml-1 rounded-full bg-teacher px-2 py-0.5 text-xs text-white">{{ received_pending }}</span>{% endif %}
+      </a>
+      <a href="?tab=sent" class="-mb-0.5 border-b-2 px-4 py-2 font-bold {% if tab == 'sent' %}border-student text-student{% else %}border-transparent text-soft hover:text-ink{% endif %}" {% if tab == 'sent' %}aria-current="page"{% endif %}>
+        我送出的邀請
+      </a>
+    </nav>
+  {% else %}
+    <p class="mt-2 text-soft">你送給老師的邀請都在這裡。</p>
+  {% endif %}
+
+  {% if tab == "received" %}
+    {# ───── 老師：收到的邀請 ───── #}
+    {% if received %}
+      <ul class="mt-6 space-y-4">
+        {% for match in received %}
+          <li class="rounded-2xl border bg-white p-5 {% if match.is_pending %}border-teacher{% else %}border-grid{% endif %}">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full font-hand text-lg font-bold {{ match.student_id|avatar_color }}">{{ match.student_name|slice:":1" }}</span>
+                <div>
+                  <p class="font-bold">{{ match.student_name }}</p>
+                  <p class="text-sm text-soft">想上 {{ match.subject }}，{{ match.created_at|date:"n 月 j 日" }}送出</p>
+                </div>
+              </div>
+              {% include "matching/_status_badge.html" %}
+            </div>
+
+            <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-[7rem_1fr]">
+              <dt class="text-soft">希望時段</dt><dd>{{ match.preferred_schedule }}</dd>
+              <dt class="text-soft">學生留言</dt><dd class="leading-6">{{ match.message|linebreaksbr }}</dd>
+              {% if match.is_accepted %}
+                <dt class="text-soft">學生聯絡方式</dt><dd class="font-bold text-emerald-800">{{ match.student_contact }}</dd>
+              {% endif %}
+              {% if match.tutor_reply %}
+                <dt class="text-soft">你的回覆</dt><dd>{{ match.tutor_reply }}</dd>
+              {% endif %}
+            </dl>
+
+            {% if match.is_accepted %}
+              <div class="mt-4 flex justify-end">
+                <a href="{% url 'matching:chat' match.id %}" class="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-1.5 text-sm font-bold text-white hover:bg-student-dark">
+                  聊天室{% if match.unread_count %}<span class="rounded-full bg-teacher px-1.5 text-xs">{{ match.unread_count }} 則新訊息</span>{% endif %}
+                </a>
+              </div>
+            {% endif %}
+
+            {% if match.is_pending %}
+              <form method="post" class="form-body mt-5 border-t border-grid pt-4">
+                {% csrf_token %}
+                <label for="reply-{{ match.id }}" class="!font-medium">給學生的回覆 <span class="font-normal text-soft">（選填）</span></label>
+                <textarea id="reply-{{ match.id }}" name="tutor_reply" rows="2" maxlength="500" placeholder="例如：很高興收到你的邀請，我們可以先約一堂試教。"></textarea>
+                <div class="mt-3 flex flex-wrap justify-end gap-2">
+                  <button type="submit" formaction="{% url 'matching:reject' match.id %}" class="rounded-xl border-2 border-grid px-5 py-2 font-bold text-soft hover:border-ink hover:text-ink">婉拒</button>
+                  <button type="submit" formaction="{% url 'matching:accept' match.id %}" class="rounded-xl bg-teacher px-5 py-2 font-bold text-white hover:bg-teacher-dark">接受邀請</button>
+                </div>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="mt-6 rounded-2xl border-2 border-dashed border-grid bg-white/70 px-6 py-12 text-center">
+        <p class="font-hand text-2xl font-bold">還沒有收到邀請</p>
+        <p class="mt-2 text-soft">把老師檔案寫得更完整，學生會更容易找到你。</p>
+        <a href="{% url 'tutors:profile-edit' %}" class="mt-5 inline-block rounded-full bg-teacher px-5 py-2 font-bold text-white">編輯老師檔案</a>
+      </div>
+    {% endif %}
+
+  {% else %}
+    {# ───── 學生：送出的邀請 ───── #}
+    {% if sent %}
+      <ul class="mt-6 space-y-4">
+        {% for match in sent %}
+          <li class="rounded-2xl border border-grid bg-white p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <a href="{% url 'tutors:detail' match.tutor_id %}" class="flex items-center gap-3 hover:text-student">
+                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full font-hand text-lg font-bold {{ match.tutor_id|avatar_color }}">{{ match.tutor.initial }}</span>
+                <span>
+                  <span class="block font-bold">{{ match.tutor.display_name }}</span>
+                  <span class="block text-sm text-soft">{{ match.subject }}，{{ match.created_at|date:"n 月 j 日" }}送出</span>
+                </span>
+              </a>
+              {% include "matching/_status_badge.html" %}
+            </div>
+
+            {% if match.is_accepted %}
+              <div class="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm">
+                <p class="font-bold text-emerald-800">老師的聯絡方式</p>
+                <p class="mt-1 break-all text-emerald-900">{{ match.tutor.contact_info }}</p>
+                {% if match.tutor_reply %}<p class="mt-2 text-emerald-900">老師說：{{ match.tutor_reply }}</p>{% endif %}
+              </div>
+            {% elif match.tutor_reply %}
+              <p class="mt-4 text-sm text-soft">老師說：{{ match.tutor_reply }}</p>
+            {% endif %}
+
+            <div class="mt-4 flex flex-wrap justify-end gap-2">
+              {% if match.is_pending %}
+                <form method="post" action="{% url 'matching:cancel' match.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="rounded-xl border-2 border-grid px-4 py-1.5 text-sm font-bold text-soft hover:border-ink hover:text-ink">取消邀請</button>
+                </form>
+              {% elif match.is_accepted %}
+                <a href="{% url 'matching:chat' match.id %}" class="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-1.5 text-sm font-bold text-white hover:bg-student-dark">
+                  聊天室{% if match.unread_count %}<span class="rounded-full bg-teacher px-1.5 text-xs">{{ match.unread_count }} 則新訊息</span>{% endif %}
+                </a>
+                {% if match.review %}
+                  <p class="self-center text-sm text-soft">你給了 <span class="text-amber-500">{{ match.review.rating|stars }}</span></p>
+                {% else %}
+                  <a href="{% url 'matching:review' match.id %}" class="rounded-xl bg-student px-4 py-1.5 text-sm font-bold text-white hover:bg-student-dark">留下評價</a>
+                {% endif %}
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="mt-6 rounded-2xl border-2 border-dashed border-grid bg-white/70 px-6 py-12 text-center">
+        <p class="font-hand text-2xl font-bold">你還沒有邀請任何老師</p>
+        <p class="mt-2 text-soft">找到喜歡的老師後，在老師的檔案頁按「邀請這位老師」。</p>
+        <a href="{% url 'tutors:list' %}" class="mt-5 inline-block rounded-full bg-student px-5 py-2 font-bold text-white">開始找老師</a>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

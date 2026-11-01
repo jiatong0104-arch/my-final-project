@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% load ui %}
+
+{% block title %}邀請 {{ tutor.display_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 pt-10 sm:px-6">
+  <a href="{% url 'tutors:detail' tutor.id %}" class="text-sm font-medium text-soft hover:text-student">← 回到 {{ tutor.display_name }} 的檔案</a>
+
+  <h1 class="mt-5 font-hand text-4xl font-bold">邀請老師</h1>
+
+  <div class="mt-5 flex items-center gap-4 rounded-2xl border border-grid bg-white p-4">
+    <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full font-hand text-xl font-bold {{ tutor.id|avatar_color }}">{{ tutor.initial }}</span>
+    <div class="min-w-0">
+      <p class="font-bold">{{ tutor.display_name }}</p>
+      <p class="truncate text-sm text-soft">{{ tutor.headline }}</p>
+    </div>
+    <p class="ml-auto whitespace-nowrap text-sm text-soft"><span class="text-lg font-bold text-ink">{{ tutor.rate_display }}</span> / 小時</p>
+  </div>
+
+  <form method="post" class="form-body mt-6 rounded-3xl border border-grid bg-white p-6 sm:p-8" novalidate>
+    {% csrf_token %}
+    {% include "core/includes/form_errors.html" %}
+    {% include "core/includes/field.html" with field=form.subject %}
+    {% include "core/includes/field.html" with field=form.preferred_schedule %}
+    {% include "core/includes/field.html" with field=form.message %}
+    {% include "core/includes/field.html" with field=form.student_contact %}
+    <button type="submit" class="mt-2 w-full rounded-xl bg-student px-6 py-3 font-bold text-white hover:bg-student-dark">送出邀請</button>
+  </form>
+</div>
+{% endblock %}
