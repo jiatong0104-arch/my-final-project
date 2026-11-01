@@ -1,0 +1,12 @@
+[project]
+name = "my-final-project"
+version = "0.1.0"
+description = "家教媒合平台 TutorMatch"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "dj-database-url>=3.1.2",
+    "django>=6.1.2",
+    "django-allauth[socialaccount]>=65.21.1",
+    "python-dotenv>=1.2.4",
+]
