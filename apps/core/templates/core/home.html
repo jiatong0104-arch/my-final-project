@@ -1,0 +1,182 @@
+{% extends "core/base.html" %}
+{% load ui %}
+
+{% block title %}首頁{% endblock %}
+
+{% block content %}
+{# ───────── 身分選擇 ───────── #}
+<section class="mx-auto max-w-6xl px-4 pt-12 sm:px-6 sm:pt-16">
+  <h1 class="text-center font-hand text-4xl font-bold leading-tight sm:text-6xl">請問您的身分是？</h1>
+  <p class="mt-4 text-center text-lg text-soft">選一邊，看看良師配能幫你做什麼。</p>
+
+  <div class="mt-10 grid overflow-hidden rounded-3xl border-2 border-ink bg-white md:grid-cols-2">
+    <a href="#student" class="group flex flex-col items-center gap-6 px-6 py-10 text-center transition-colors hover:bg-student-light sm:py-14 md:border-r-2 md:border-ink">
+      <span class="tianzige grid h-36 w-36 place-items-center text-student transition-transform group-hover:-rotate-3 sm:h-44 sm:w-44">
+        <span class="font-hand text-8xl font-bold sm:text-9xl">學</span>
+      </span>
+      <span>
+        <span class="block font-hand text-3xl font-bold text-student">我是學生／家長</span>
+        <span class="mt-2 block text-soft">想找一位真正適合的家教老師</span>
+      </span>
+      <span class="inline-flex items-center gap-2 rounded-full border-2 border-student px-5 py-2 font-bold text-student group-hover:bg-student group-hover:text-white">
+        看學生怎麼用
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3.5 8.5 8 13l4.5-4.5"/></svg>
+      </span>
+    </a>
+
+    <a href="#teacher" class="group flex flex-col items-center gap-6 border-t-2 border-ink px-6 py-10 text-center transition-colors hover:bg-teacher-light sm:py-14 md:border-t-0">
+      <span class="tianzige grid h-36 w-36 place-items-center text-teacher transition-transform group-hover:rotate-3 sm:h-44 sm:w-44">
+        <span class="font-hand text-8xl font-bold sm:text-9xl">教</span>
+      </span>
+      <span>
+        <span class="block font-hand text-3xl font-bold text-teacher">我是老師</span>
+        <span class="mt-2 block text-soft">想找到學生，把專長教給需要的人</span>
+      </span>
+      <span class="inline-flex items-center gap-2 rounded-full border-2 border-teacher px-5 py-2 font-bold text-teacher group-hover:bg-teacher group-hover:text-white">
+        看老師怎麼用
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3v10M3.5 8.5 8 13l4.5-4.5"/></svg>
+      </span>
+    </a>
+  </div>
+
+  <p class="mt-6 text-center text-soft">
+    目前有 <strong class="text-ink">{{ stats.tutors }}</strong> 位老師開放接案，涵蓋 <strong class="text-ink">{{ stats.subjects }}</strong> 個科目，已促成 <strong class="text-ink">{{ stats.matches }}</strong> 次媒合。
+  </p>
+</section>
+
+{# ───────── 學生說明 ───────── #}
+<section id="student" class="scroll-mt-20 mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+  <div class="flex items-center gap-4">
+    <span class="tianzige grid h-14 w-14 shrink-0 place-items-center text-student"><span class="font-hand text-3xl font-bold">學</span></span>
+    <h2 class="font-hand text-3xl font-bold sm:text-4xl">給學生與家長</h2>
+  </div>
+
+  <div class="mt-10 rounded-3xl border border-grid bg-white p-6 sm:p-10">
+    <h3 class="text-xl font-bold">找家教，常常卡在這些地方</h3>
+    <ul class="mt-6 divide-y divide-grid">
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-student decoration-2">問了一圈親友，還是不知道哪位老師適合</p>
+        <p class="font-medium">依<span class="marker">科目、年級、地區、時薪</span>篩選，一次比較所有老師。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-student decoration-2">不知道老師到底教得好不好</p>
+        <p class="font-medium">每一則評價，都來自<span class="marker">真正上過課的學生</span>。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-student decoration-2">還沒確定要上課，就得先把聯絡方式給陌生人</p>
+        <p class="font-medium">老師接受邀請後，<span class="marker">雙方才看得到彼此的聯絡方式</span>。</p>
+      </li>
+    </ul>
+  </div>
+
+  <h3 class="mt-14 text-xl font-bold">四個步驟開始上課</h3>
+  <ol class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <li class="border-l-4 border-student bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-student">1</p>
+      <p class="mt-1 font-bold">搜尋老師</p>
+      <p class="mt-1 text-sm text-soft">不用登入就能瀏覽所有老師的檔案與評價。</p>
+    </li>
+    <li class="border-l-4 border-student bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-student">2</p>
+      <p class="mt-1 font-bold">送出邀請</p>
+      <p class="mt-1 text-sm text-soft">寫下你的程度、目標和希望的上課時段。</p>
+    </li>
+    <li class="border-l-4 border-student bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-student">3</p>
+      <p class="mt-1 font-bold">老師接受，開始上課</p>
+      <p class="mt-1 text-sm text-soft">在網站的聊天室和老師約好第一堂課的時間地點。</p>
+    </li>
+    <li class="border-l-4 border-student bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-student">4</p>
+      <p class="mt-1 font-bold">留下評價</p>
+      <p class="mt-1 text-sm text-soft">你的心得，會幫助下一位學生做決定。</p>
+    </li>
+  </ol>
+
+  {% if featured_tutors %}
+    <h3 class="mt-14 text-xl font-bold">學生評價最高的老師</h3>
+    <div class="mt-6 grid gap-4 md:grid-cols-3">
+      {% for tutor in featured_tutors %}
+        {% include "tutors/_tutor_card.html" %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="mt-12 flex flex-col items-center gap-3 rounded-3xl bg-student px-6 py-10 text-center text-white">
+    <p class="font-hand text-3xl font-bold">準備好找老師了嗎？</p>
+    <p class="text-white/80">先逛逛也沒關係，想邀請老師時再註冊就好。</p>
+    <div class="mt-4 flex flex-wrap justify-center gap-3">
+      <a href="{% url 'tutors:list' %}" class="rounded-full bg-white px-6 py-3 font-bold text-student hover:bg-student-light">查看所有老師</a>
+      {% if not user.is_authenticated %}
+        <a href="{% url 'account_signup' %}" class="rounded-full border-2 border-white px-6 py-3 font-bold hover:bg-white/10">註冊學生帳號</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{# ───────── 老師說明 ───────── #}
+<section id="teacher" class="scroll-mt-20 mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+  <div class="flex items-center gap-4">
+    <span class="tianzige grid h-14 w-14 shrink-0 place-items-center text-teacher"><span class="font-hand text-3xl font-bold">教</span></span>
+    <h2 class="font-hand text-3xl font-bold sm:text-4xl">給老師</h2>
+  </div>
+
+  <div class="mt-10 rounded-3xl border border-grid bg-white p-6 sm:p-10">
+    <h3 class="text-xl font-bold">接家教，常常遇到這些麻煩</h3>
+    <ul class="mt-6 divide-y divide-grid">
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-teacher decoration-2">在社群貼招生文，訊息一下就被洗掉</p>
+        <p class="font-medium">建立一份<span class="marker">老師檔案</span>，學生依科目就能找到你。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-teacher decoration-2">學生的程度和需求，要來回問很久</p>
+        <p class="font-medium">每份邀請都寫好<span class="marker">程度、目標與希望時段</span>，看完再決定。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-teacher decoration-2">把個人電話、LINE 公開在網路上</p>
+        <p class="font-medium">聯絡方式<span class="marker">只給你接受的學生</span>看。</p>
+      </li>
+    </ul>
+  </div>
+
+  <h3 class="mt-14 text-xl font-bold">四個步驟開始接案</h3>
+  <ol class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <li class="border-l-4 border-teacher bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-teacher">1</p>
+      <p class="mt-1 font-bold">建立老師檔案</p>
+      <p class="mt-1 text-sm text-soft">填寫可教科目、時薪、地區與上課方式。</p>
+    </li>
+    <li class="border-l-4 border-teacher bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-teacher">2</p>
+      <p class="mt-1 font-bold">收到邀請</p>
+      <p class="mt-1 text-sm text-soft">導覽列會提醒你有幾筆邀請等待回覆。</p>
+    </li>
+    <li class="border-l-4 border-teacher bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-teacher">3</p>
+      <p class="mt-1 font-bold">接受或婉拒</p>
+      <p class="mt-1 text-sm text-soft">接受後就能在聊天室和學生討論上課細節。</p>
+    </li>
+    <li class="border-l-4 border-teacher bg-white/70 px-5 py-4">
+      <p class="font-hand text-2xl font-bold text-teacher">4</p>
+      <p class="mt-1 font-bold">累積口碑</p>
+      <p class="mt-1 text-sm text-soft">學生的評價會顯示在你的檔案上。</p>
+    </li>
+  </ol>
+
+  <div class="mt-12 flex flex-col items-center gap-3 rounded-3xl bg-teacher px-6 py-10 text-center text-white">
+    <p class="font-hand text-3xl font-bold">把你的專長，教給需要的人</p>
+    <p class="text-white/80">註冊後填好老師檔案，學生就能找到你。不分身分，同一個帳號也能找老師。</p>
+    <div class="mt-4">
+      {% if user.is_authenticated %}
+        {% if user.tutor_profile %}
+          <a href="{% url 'tutors:profile-edit' %}" class="inline-block rounded-full bg-white px-6 py-3 font-bold text-teacher hover:bg-teacher-light">編輯我的老師檔案</a>
+        {% else %}
+          <a href="{% url 'tutors:profile-create' %}" class="inline-block rounded-full bg-white px-6 py-3 font-bold text-teacher hover:bg-teacher-light">建立老師檔案</a>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'account_signup' %}?next={% url 'tutors:profile-create' %}" class="inline-block rounded-full bg-white px-6 py-3 font-bold text-teacher hover:bg-teacher-light">註冊成為老師</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

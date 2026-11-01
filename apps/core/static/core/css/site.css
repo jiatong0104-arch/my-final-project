@@ -1,0 +1,39 @@
+/* 良師配：全站共用樣式（格線紙背景、田字格、螢光筆、表單） */
+body {
+  background-color: #FBFBF8;
+  background-image:
+    linear-gradient(#E6ECF5 1px, transparent 1px),
+    linear-gradient(90deg, #E6ECF5 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+/* 螢光筆畫重點 */
+.marker { background: linear-gradient(transparent 58%, #FFE45C 58%, #FFE45C 92%, transparent 92%); }
+/* 田字格 */
+.tianzige { position: relative; border: 2px solid currentColor; }
+.tianzige > span { position: relative; z-index: 1; }
+.tianzige::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(0deg, currentColor 0 6px, transparent 6px 12px);
+  background-size: 100% 1px, 1px 100%;
+  background-position: 0 50%, 50% 0;
+  background-repeat: no-repeat;
+  opacity: .45;
+}
+/* 表單共用樣式：Django 產生的 input / select / textarea */
+.form-body input[type=text], .form-body input[type=number], .form-body input[type=email], .form-body input[type=tel],
+.form-body input[type=password], .form-body select, .form-body textarea {
+  width: 100%; border: 1.5px solid #CBD3E0; border-radius: 10px; background: #fff;
+  padding: .65rem .85rem; font-size: 1rem; color: #1C2638;
+}
+.form-body input:focus, .form-body select:focus, .form-body textarea:focus {
+  outline: none; border-color: #2547B5; box-shadow: 0 0 0 3px rgba(37, 71, 181, .18);
+}
+.form-body .helptext, .form-body .help { display: block; font-size: .85rem; color: #5B6475; margin-top: .35rem; }
+.form-body ul.errorlist { color: #C2362E; font-size: .9rem; margin-top: .35rem; }
+.form-body p { margin-bottom: 1.1rem; }
+:where(.form-body) label { display: block; font-weight: 700; margin-bottom: .4rem; }
+:focus-visible { outline: 3px solid #2547B5; outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto !important; } * { transition: none !important; animation: none !important; } }
+html { scroll-behavior: smooth; }

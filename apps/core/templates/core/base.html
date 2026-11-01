@@ -1,0 +1,77 @@
+{% load static ui %}<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}良師配{% endblock %}｜家教媒合平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{% static 'core/js/tailwind-config.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'core/css/site.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen font-sans text-ink antialiased flex flex-col">
+  <header class="sticky top-0 z-40 border-b border-grid bg-paper/95 backdrop-blur">
+    <nav class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+      <a href="{% url 'core:home' %}" class="flex items-center gap-2" aria-label="良師配 首頁">
+        <span class="tianzige grid h-9 w-9 place-items-center font-hand text-xl font-bold text-teacher"><span>師</span></span>
+        <span class="font-hand text-2xl font-bold tracking-wide">良師配</span>
+      </a>
+
+      <button id="nav-toggle" class="rounded-lg p-2 sm:hidden" aria-expanded="false" aria-controls="nav-menu" aria-label="開啟選單">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+
+      <div id="nav-menu" class="absolute left-0 right-0 top-full hidden flex-col gap-1 border-b border-grid bg-paper px-4 py-3 sm:static sm:flex sm:flex-row sm:items-center sm:gap-1 sm:border-0 sm:bg-transparent sm:p-0">
+        <a href="{% url 'tutors:list' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-student-light hover:text-student">找老師</a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'matching:list' %}" class="relative rounded-lg px-3 py-2 font-medium hover:bg-student-light hover:text-student">
+            我的媒合
+            {% if nav_badge_count %}<span class="ml-1 inline-grid h-5 min-w-5 place-items-center rounded-full bg-teacher px-1.5 text-xs font-bold text-white" title="待回覆的邀請與未讀訊息">{{ nav_badge_count }}</span>{% endif %}
+          </a>
+          {% if user.tutor_profile %}
+            <a href="{% url 'tutors:profile-edit' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">我的老師檔案</a>
+          {% else %}
+            <a href="{% url 'tutors:profile-create' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">成為老師</a>
+          {% endif %}
+          <span class="hidden h-6 w-px bg-grid sm:block"></span>
+          <span class="px-3 py-2 text-soft">{{ user|user_display }}</span>
+          <a href="{% url 'account_logout' %}" class="rounded-lg px-3 py-2 text-soft hover:text-ink">登出</a>
+        {% else %}
+          <a href="{% url 'account_login' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-student-light">登入</a>
+          <a href="{% url 'account_signup' %}" class="rounded-lg bg-ink px-4 py-2 font-bold text-white hover:bg-student-dark">註冊</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  {% if messages %}
+    <div class="mx-auto mt-4 w-full max-w-6xl space-y-2 px-4 sm:px-6" role="status">
+      {% for message in messages %}
+        <div class="flex items-start gap-3 rounded-xl border-l-4 bg-white px-4 py-3 shadow-sm {% if message.tags == 'error' %}border-teacher{% elif message.tags == 'success' %}border-emerald-500{% else %}border-student{% endif %}">
+          <p class="flex-1">{{ message }}</p>
+          <button type="button" data-dismiss class="text-soft hover:text-ink" aria-label="關閉訊息">✕</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main class="flex-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block footer %}
+  <footer class="mt-20 border-t border-grid bg-paper">
+    <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-soft sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <p><span class="font-hand text-base font-bold text-ink">良師配</span>　讓學生找到對的老師，讓老師遇見想學的學生。</p>
+      <p>Python 全端開發 期中專案</p>
+    </div>
+  </footer>
+  {% endblock %}
+
+  <script src="{% static 'core/js/site.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

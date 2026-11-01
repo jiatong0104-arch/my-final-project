@@ -1,0 +1,6 @@
+<div class="mb-5">
+  <label for="{{ field.id_for_label }}" class="mb-1.5 block font-bold">{{ field.label }}{% if not field.field.required and not hide_optional %} <span class="font-normal text-soft">（選填）</span>{% endif %}</label>
+  {{ field }}
+  {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}
+  {% for error in field.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+</div>

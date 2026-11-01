@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>系統發生錯誤｜良師配</title>
+  {# 500 頁面不經過 context processor，也可能是資料庫出錯，所以不繼承 base.html、不查資料庫 #}
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #FBFBF8; color: #1C2638;
+           font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; padding: 24px; text-align: center; }
+    .box { width: 112px; height: 112px; margin: 0 auto; border: 2px solid #C2362E; color: #C2362E; display: grid; place-items: center; font-size: 64px; font-weight: 700; }
+    h1 { margin-top: 32px; font-size: 32px; }
+    p { color: #5B6475; line-height: 1.7; }
+    a { display: inline-block; margin-top: 16px; padding: 12px 24px; border-radius: 999px; background: #1C2638; color: #fff; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="box">誤</div>
+    <h1>系統發生錯誤</h1>
+    <p>伺服器處理時出了問題，請稍後再試一次。</p>
+    <a href="/">回到首頁</a>
+  </main>
+</body>
+</html>

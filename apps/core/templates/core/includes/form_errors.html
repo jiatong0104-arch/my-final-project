@@ -1,0 +1,9 @@
+{% if form.non_field_errors %}
+  <div class="mb-5 rounded-xl border-l-4 border-teacher bg-teacher-light px-4 py-3 text-teacher-dark" role="alert">
+    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+  </div>
+{% elif form.errors %}
+  <div class="mb-5 rounded-xl border-l-4 border-teacher bg-teacher-light px-4 py-3 text-teacher-dark" role="alert">
+    <p>有些欄位需要修正，請看下方紅字說明。</p>
+  </div>
+{% endif %}
