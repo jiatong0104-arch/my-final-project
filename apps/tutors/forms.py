@@ -2,8 +2,10 @@ import re
 
 from django import forms
 
+from apps.core.uploads import clean_document, clean_image, clean_video, limit_mb
+
 from . import choices
-from .models import Subject, TutorProfile
+from .models import Subject, TutorPost, TutorProfile
 
 
 def grouped_choices(groups, placeholder):
@@ -22,12 +24,17 @@ def split_subject_names(text):
 
 
 class TutorProfileForm(forms.ModelForm):
-    school_choice = forms.ChoiceField(label="學校", choices=grouped_choices(choices.SCHOOLS, "請選擇學校"))
+    # 學校、系所是否必填，要看最高學歷（高中職只填學校），所以在 clean() 裡檢查
+    school_choice = forms.ChoiceField(
+        label="學校", required=False, choices=grouped_choices(choices.SCHOOLS, "請選擇學校"),
+    )
     school_other = forms.CharField(
         label="學校名稱", required=False, max_length=100,
         widget=forms.TextInput(attrs={"placeholder": "請輸入學校名稱"}),
     )
-    department_choice = forms.ChoiceField(label="系所", choices=grouped_choices(choices.DEPARTMENTS, "請選擇系所"))
+    department_choice = forms.ChoiceField(
+        label="系所", required=False, choices=grouped_choices(choices.DEPARTMENTS, "請選擇系所"),
+    )
     department_other = forms.CharField(
         label="系所名稱", required=False, max_length=100,
         widget=forms.TextInput(attrs={"placeholder": "請輸入系所名稱"}),
@@ -43,7 +50,8 @@ class TutorProfileForm(forms.ModelForm):
         model = TutorProfile
         fields = (
             "headline",
-            "degree",
+            "education_level",
+            "education_status",
             "bio",
             "subjects",
             "hourly_rate_min",
@@ -56,6 +64,8 @@ class TutorProfileForm(forms.ModelForm):
         )
         widgets = {
             "bio": forms.Textarea(attrs={"rows": 8, "maxlength": 5000}),
+            "education_level": forms.RadioSelect,
+            "education_status": forms.RadioSelect,
             "hourly_rate_min": forms.NumberInput(attrs={"step": 50, "placeholder": "例如 600"}),
             "hourly_rate_max": forms.NumberInput(attrs={"step": 50, "placeholder": "例如 1000"}),
         }
@@ -97,19 +107,28 @@ class TutorProfileForm(forms.ModelForm):
             groups[subject.level]["items"].append({"subject": subject, "checked": str(subject.pk) in selected})
         return groups.values()
 
-    def _resolve(self, name):
+    def _resolve(self, name, label):
         choice = self.cleaned_data.get(f"{name}_choice")
         if choice == choices.OTHER:
             text = (self.cleaned_data.get(f"{name}_other") or "").strip()
             if not text:
                 self.add_error(f"{name}_other", "選擇「其他」時，請輸入名稱。")
             return text
-        return choice
+        if not choice:
+            self.add_error(f"{name}_choice", f"請選擇{label}。")
+        return choice or ""
 
     def clean(self):
         cleaned = super().clean()
-        self.school_value = self._resolve("school")
-        self.department_value = self._resolve("department")
+        if cleaned.get("education_level") == TutorProfile.EducationLevel.HIGH_SCHOOL:
+            # 高中職：清單裡都是大學，所以直接輸入校名，不用填系所
+            self.school_value = (cleaned.get("school_other") or "").strip()
+            if not self.school_value:
+                self.add_error("school_other", "請輸入學校名稱。")
+            self.department_value = ""
+        else:
+            self.school_value = self._resolve("school", "學校")
+            self.department_value = self._resolve("department", "系所")
 
         low, high = cleaned.get("hourly_rate_min"), cleaned.get("hourly_rate_max")
         if low is not None and high is not None and low > high:
@@ -140,3 +159,47 @@ class TutorProfileForm(forms.ModelForm):
             if subject is None:
                 subject = Subject.objects.create(name=name, level=level, is_custom=True)
             self.instance.subjects.add(subject)
+
+
+class VerificationForm(forms.Form):
+    document = forms.FileField(
+        label="證件照片或 PDF",
+        widget=forms.ClearableFileInput(attrs={"accept": "image/*,application/pdf"}),
+    )
+
+    def clean_document(self):
+        return clean_document(self.cleaned_data["document"])
+
+
+class TutorPostForm(forms.ModelForm):
+    """老師發動態：文字，加上一張照片或一部影片（都可以不加，但不能全部空白）。"""
+
+    class Meta:
+        model = TutorPost
+        fields = ("body", "image", "video")
+        widgets = {
+            "body": forms.Textarea(attrs={"rows": 3, "maxlength": 3000, "placeholder": "分享教學心得、上課花絮，或錄一段試教影片…"}),
+            "image": forms.FileInput(attrs={"accept": "image/*"}),
+            "video": forms.FileInput(attrs={"accept": "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"}),
+        }
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        return clean_image(image) if image else image
+
+    def clean_video(self):
+        video = self.cleaned_data.get("video")
+        return clean_video(video) if video else video
+
+    def clean(self):
+        cleaned = super().clean()
+        cleaned["body"] = (cleaned.get("body") or "").strip()
+        if cleaned.get("image") and cleaned.get("video"):
+            raise forms.ValidationError("一則動態只能放一張照片或一部影片，請擇一。")
+        if not (cleaned["body"] or cleaned.get("image") or cleaned.get("video")) and not self.errors:
+            raise forms.ValidationError("寫點文字，或加一張照片、一部影片再發布。")
+        return cleaned
+
+    @staticmethod
+    def limits():
+        return {"image": limit_mb("image"), "video": limit_mb("video")}

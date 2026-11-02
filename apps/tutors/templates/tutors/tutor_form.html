@@ -33,23 +33,47 @@
 
     {# ───── 學歷 ───── #}
     <h2 class="mb-4 mt-8 border-b border-grid pb-2 text-lg font-bold text-teacher">學歷</h2>
+    <div>
+      <fieldset class="mb-5">
+        <legend class="mb-1.5 font-bold">最高學歷</legend>
+        <div class="flex flex-wrap gap-2" data-education-level>
+          {% for radio in form.education_level %}
+            <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-grid px-3.5 py-2 has-[:checked]:border-teacher has-[:checked]:bg-teacher-light has-[:checked]:font-bold">
+              {{ radio.tag }} {{ radio.choice_label }}
+            </label>
+          {% endfor %}
+        </div>
+        {% for error in form.education_level.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+      </fieldset>
+      <fieldset class="mb-5">
+        <legend class="mb-1.5 font-bold">在學／畢業</legend>
+        <div class="flex flex-wrap gap-2">
+          {% for radio in form.education_status %}
+            <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-grid px-3.5 py-2 has-[:checked]:border-teacher has-[:checked]:bg-teacher-light has-[:checked]:font-bold">
+              {{ radio.tag }} {{ radio.choice_label }}
+            </label>
+          {% endfor %}
+        </div>
+        {% for error in form.education_status.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+      </fieldset>
+    </div>
     <div class="grid gap-x-5 sm:grid-cols-2">
       <div>
-        {% include "core/includes/field.html" with field=form.school_choice %}
+        <div data-school-select>
+          {% include "core/includes/field.html" with field=form.school_choice hide_optional=True %}
+        </div>
         <div data-other-for="{{ form.school_choice.id_for_label }}">
           {% include "core/includes/field.html" with field=form.school_other hide_optional=True %}
         </div>
       </div>
-      <div>
-        {% include "core/includes/field.html" with field=form.department_choice %}
+      <div data-department>
+        {% include "core/includes/field.html" with field=form.department_choice hide_optional=True %}
         <div data-other-for="{{ form.department_choice.id_for_label }}">
           {% include "core/includes/field.html" with field=form.department_other hide_optional=True %}
         </div>
       </div>
     </div>
-    <div class="sm:w-1/2 sm:pr-2.5">
-      {% include "core/includes/field.html" with field=form.degree %}
-    </div>
+    <p class="help -mt-2 mb-2">修改學歷後，「已認證」標章會先拿掉，重新上傳證件審核通過後再恢復。</p>
 
     {# ───── 可教科目 ───── #}
     <h2 class="mb-1 mt-8 border-b border-grid pb-2 text-lg font-bold text-teacher">可教科目</h2>

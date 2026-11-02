@@ -1,5 +1,7 @@
 from django import forms
 
+from apps.core.uploads import clean_image
+
 from .models import MatchRequest, Review
 
 
@@ -44,14 +46,31 @@ class ReviewForm(forms.ModelForm):
 
 
 class MessageForm(forms.Form):
+    """一則訊息可以是文字、圖片，或兩者都有。"""
+
     body = forms.CharField(
+        required=False,
         max_length=2000,
         label="訊息",
         widget=forms.Textarea(attrs={"rows": 1, "placeholder": "輸入訊息…（Enter 送出，Shift + Enter 換行）"}),
     )
 
+    image = forms.ImageField(required=False, label="圖片")
+
     def clean_body(self):
-        body = self.cleaned_data["body"].strip()
-        if not body:
+        return self.cleaned_data["body"].strip()
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        return clean_image(image, max_side=1600) if image else None
+
+    def clean(self):
+        cleaned = super().clean()
+        if not self.errors and not cleaned.get("body") and not cleaned.get("image"):
             raise forms.ValidationError("訊息不能是空白。")
-        return body
+        return cleaned
+
+    def first_error(self):
+        for errors in self.errors.values():
+            return errors[0]
+        return "訊息沒有送出，請再試一次。"

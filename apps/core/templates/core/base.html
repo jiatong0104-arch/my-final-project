@@ -16,7 +16,8 @@
   <header class="sticky top-0 z-40 border-b border-grid bg-paper/95 backdrop-blur">
     <nav class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
       <a href="{% url 'core:home' %}" class="flex items-center gap-2" aria-label="良師配 首頁">
-        <span class="tianzige grid h-9 w-9 place-items-center font-hand text-xl font-bold text-teacher"><span>師</span></span>
+        {# 左上角依模式顯示「學」（學生，藍）或「師」（老師，紅） #}
+        <span class="tianzige grid h-9 w-9 place-items-center font-hand text-xl font-bold {% if is_teacher_mode %}text-teacher{% else %}text-student{% endif %}" title="{% if is_teacher_mode %}老師模式{% else %}學生模式{% endif %}"><span>{% if is_teacher_mode %}師{% else %}學{% endif %}</span></span>
         <span class="font-hand text-2xl font-bold tracking-wide">良師配</span>
       </a>
 
@@ -25,17 +26,40 @@
       </button>
 
       <div id="nav-menu" class="absolute left-0 right-0 top-full hidden flex-col gap-1 border-b border-grid bg-paper px-4 py-3 sm:static sm:flex sm:flex-row sm:items-center sm:gap-1 sm:border-0 sm:bg-transparent sm:p-0">
-        <a href="{% url 'tutors:list' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-student-light hover:text-student">找老師</a>
-        {% if user.is_authenticated %}
-          <a href="{% url 'matching:list' %}" class="relative rounded-lg px-3 py-2 font-medium hover:bg-student-light hover:text-student">
-            我的媒合
-            {% if nav_badge_count %}<span class="ml-1 inline-grid h-5 min-w-5 place-items-center rounded-full bg-teacher px-1.5 text-xs font-bold text-white" title="待回覆的邀請與未讀訊息">{{ nav_badge_count }}</span>{% endif %}
-          </a>
+        {% if is_teacher_mode %}
+          {# ── 老師模式 ── #}
           {% if user.tutor_profile %}
-            <a href="{% url 'tutors:profile-edit' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">我的老師檔案</a>
+            <a href="{% url 'tutors:detail' user.tutor_profile.id %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">我的主頁</a>
+            <a href="{% url 'matching:list' %}?tab=received" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">
+              學生邀請
+              {% if nav_badge_count %}<span class="ml-1 inline-grid h-5 min-w-5 place-items-center rounded-full bg-teacher px-1.5 text-xs font-bold text-white" title="待回覆的邀請與未讀訊息">{{ nav_badge_count }}</span>{% endif %}
+            </a>
+            <a href="{% url 'tutors:profile-edit' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">編輯檔案</a>
           {% else %}
-            <a href="{% url 'tutors:profile-create' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">成為老師</a>
+            <a href="{% url 'tutors:profile-create' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-teacher-light hover:text-teacher">建立老師檔案</a>
           {% endif %}
+        {% else %}
+          {# ── 學生模式 ── #}
+          <a href="{% url 'tutors:list' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-student-light hover:text-student">找老師</a>
+          {% if user.is_authenticated %}
+            <a href="{% url 'matching:list' %}" class="rounded-lg px-3 py-2 font-medium hover:bg-student-light hover:text-student">
+              我的媒合
+              {% if nav_badge_count %}<span class="ml-1 inline-grid h-5 min-w-5 place-items-center rounded-full bg-teacher px-1.5 text-xs font-bold text-white" title="待回覆的邀請與未讀訊息">{{ nav_badge_count }}</span>{% endif %}
+            </a>
+          {% endif %}
+        {% endif %}
+
+        {# 切換模式：改的是 session，所以用 POST #}
+        <form method="post" action="{% url 'core:switch-mode' %}" class="contents">
+          {% csrf_token %}
+          <input type="hidden" name="mode" value="{% if is_teacher_mode %}student{% else %}teacher{% endif %}">
+          <button type="submit" class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-left font-medium {% if is_teacher_mode %}text-student hover:bg-student-light{% else %}text-teacher hover:bg-teacher-light{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 5h10m0 0L9.5 2.5M12 5 9.5 7.5M14 11H4m0 0 2.5-2.5M4 11l2.5 2.5"/></svg>
+            {% if is_teacher_mode %}切換為學生{% else %}切換為老師{% endif %}
+          </button>
+        </form>
+
+        {% if user.is_authenticated %}
           <span class="hidden h-6 w-px bg-grid sm:block"></span>
           <span class="px-3 py-2 text-soft">{{ user|user_display }}</span>
           <a href="{% url 'account_logout' %}" class="rounded-lg px-3 py-2 text-soft hover:text-ink">登出</a>

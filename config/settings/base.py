@@ -78,6 +78,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.matching.context_processors.pending_requests",
+                "apps.core.modes.ui_mode",
             ],
         },
     },
@@ -133,6 +134,21 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+# 使用者上傳的檔案
+# 公開檔案（老師動態的照片、影片）：放在 media/，任何人都能用網址看
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# 私密檔案（身分證件、聊天室圖片）：放在 private_media/，沒有公開網址，
+# 只能透過會檢查權限的 View 讀取（見 apps/core/uploads.py 的 private_storage）
+PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
+
+# 上傳大小上限（MB）
+UPLOAD_LIMITS_MB = {"image": 10, "document": 10, "video": 200}
+# 超過這個大小的上傳會先寫到暫存檔，不會整個放進記憶體
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 
 # Email

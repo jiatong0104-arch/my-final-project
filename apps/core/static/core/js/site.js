@@ -16,3 +16,10 @@ document.querySelectorAll("[data-dismiss]").forEach((button) => {
 document.querySelectorAll("[data-autosubmit]").forEach((select) => {
   select.addEventListener("change", () => select.form.submit());
 });
+
+// 刪除之類的動作，送出前再確認一次
+document.querySelectorAll("form[data-confirm]").forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+  });
+});

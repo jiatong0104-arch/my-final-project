@@ -1,6 +1,10 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+from apps.core.uploads import RandomName, get_private_storage
 
 
 class Subject(models.Model):
@@ -51,12 +55,16 @@ class TutorProfile(models.Model):
         KAOHSIUNG = "kaohsiung", "高雄市"
         OTHER = "other", "其他縣市"
 
-    class Degree(models.TextChoices):
-        BACHELOR_STUDENT = "bachelor_student", "大學在學"
-        BACHELOR = "bachelor", "學士"
-        MASTER_STUDENT = "master_student", "碩士在學"
+    class EducationLevel(models.TextChoices):
+        HIGH_SCHOOL = "high_school", "高中職"
+        ASSOCIATE = "associate", "專科"
+        BACHELOR = "bachelor", "大學"
         MASTER = "master", "碩士"
         DOCTOR = "doctor", "博士"
+
+    class EducationStatus(models.TextChoices):
+        STUDYING = "studying", "在學"
+        GRADUATED = "graduated", "畢業"
 
     class TeachingMode(models.TextChoices):
         ONLINE = "online", "線上"
@@ -76,12 +84,24 @@ class TutorProfile(models.Model):
     )
     bio = models.TextField(max_length=5000, verbose_name="自我介紹與教學方式")
     school = models.CharField(max_length=100, verbose_name="學校")
-    department = models.CharField(max_length=100, verbose_name="系所")
-    degree = models.CharField(
+    # 高中職不用填系所，所以可以空白
+    department = models.CharField(max_length=100, blank=True, verbose_name="系所")
+    education_level = models.CharField(
         max_length=20,
-        choices=Degree.choices,
-        default=Degree.BACHELOR,
-        verbose_name="學位",
+        choices=EducationLevel.choices,
+        default=EducationLevel.BACHELOR,
+        verbose_name="最高學歷",
+    )
+    education_status = models.CharField(
+        max_length=20,
+        choices=EducationStatus.choices,
+        default=EducationStatus.GRADUATED,
+        verbose_name="在學／畢業",
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name="已認證",
+        help_text="管理員審核學生證或畢業證書後打勾。修改學歷時會自動取消，需要重新審核。",
     )
     years_of_experience = models.PositiveSmallIntegerField(
         default=0,
@@ -135,8 +155,13 @@ class TutorProfile(models.Model):
 
     @property
     def education(self):
-        """例如：國立臺灣大學 數學系（學士）"""
-        return f"{self.school} {self.department}（{self.get_degree_display()}）"
+        """例如：國立臺灣大學 數學系（大學畢業）、建國高中（高中職在學）"""
+        place = f"{self.school} {self.department}".strip()
+        return f"{place}（{self.education_label}）"
+
+    @property
+    def education_label(self):
+        return f"{self.get_education_level_display()}{self.get_education_status_display()}"
 
     @property
     def rate_display(self):
@@ -154,3 +179,114 @@ class TutorProfile(models.Model):
     @property
     def initial(self):
         return self.display_name[:1].upper()
+
+
+class VerificationRequest(models.Model):
+    """老師身分認證：上傳學生證（在學）或畢業證書（畢業），由管理員在後台審核。
+
+    證件是敏感個資：存在 private_media/，沒有公開網址，只有管理員能透過 View 看；
+    審核完成（通過或退回）就刪除檔案，只留下審核紀錄。
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "審核中"
+        APPROVED = "approved", "已通過"
+        REJECTED = "rejected", "未通過"
+
+    tutor = models.ForeignKey(
+        TutorProfile,
+        on_delete=models.CASCADE,
+        related_name="verifications",
+        verbose_name="老師",
+    )
+    document = models.FileField(
+        upload_to=RandomName("verification"),
+        storage=get_private_storage,
+        blank=True,
+        verbose_name="證件檔案",
+    )
+    education_snapshot = models.CharField(
+        max_length=200,
+        verbose_name="申請時填寫的學歷",
+        help_text="審核時對照證件上的學校、系所是否相符。",
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING, verbose_name="狀態",
+    )
+    admin_note = models.CharField(
+        max_length=200, blank=True, verbose_name="審核說明",
+        help_text="未通過時寫給老師看的原因，例如「照片模糊，看不清楚學校名稱」。",
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True, verbose_name="申請時間")
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name="審核時間")
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="審核者",
+    )
+
+    class Meta:
+        verbose_name = "身分認證申請"
+        verbose_name_plural = "身分認證申請"
+        ordering = ("-submitted_at",)
+        constraints = [
+            # 同一位老師同時只能有一筆審核中的申請
+            models.UniqueConstraint(
+                fields=("tutor",),
+                condition=models.Q(status="pending"),
+                name="one_pending_verification_per_tutor",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.tutor.display_name}（{self.get_status_display()}）"
+
+    def finish(self, status, reviewer, note=""):
+        """審核完成：更新狀態、老師的標章，並刪除證件檔案。"""
+        from django.utils import timezone
+
+        self.status = status
+        self.admin_note = note
+        self.reviewed_at = timezone.now()
+        self.reviewed_by = reviewer
+        if self.document:
+            self.document.delete(save=False)
+        self.save()
+        if status == self.Status.APPROVED:
+            TutorProfile.objects.filter(pk=self.tutor_id).update(is_verified=True)
+
+
+class TutorPost(models.Model):
+    """老師主頁的動態：一段文字，可以附一張照片或一部影片（二選一）。"""
+
+    tutor = models.ForeignKey(
+        TutorProfile,
+        on_delete=models.CASCADE,
+        related_name="posts",
+        verbose_name="老師",
+    )
+    body = models.TextField(max_length=3000, blank=True, verbose_name="內容")
+    image = models.ImageField(upload_to=RandomName("posts/images"), blank=True, verbose_name="照片")
+    video = models.FileField(upload_to=RandomName("posts/videos"), blank=True, verbose_name="影片")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="發布時間")
+
+    class Meta:
+        verbose_name = "老師動態"
+        verbose_name_plural = "老師動態"
+        ordering = ("-created_at", "-id")
+
+    def __str__(self):
+        return f"{self.tutor.display_name}：{self.body[:20] or '（照片／影片）'}"
+
+
+@receiver(post_delete, sender=TutorPost)
+@receiver(post_delete, sender=VerificationRequest)
+def delete_uploaded_files(sender, instance, **kwargs):
+    """資料刪除後，一起刪掉硬碟上的檔案（包含刪除老師檔案時連帶刪除的貼文）。"""
+    for name in ("image", "video", "document"):
+        file = getattr(instance, name, None)
+        if file:
+            file.delete(save=False)

@@ -1,7 +1,10 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
+from apps.core.uploads import RandomName, get_private_storage
 from apps.tutors.models import Subject, TutorProfile
 
 
@@ -135,7 +138,14 @@ class Message(models.Model):
         related_name="sent_messages",
         verbose_name="傳送者",
     )
-    body = models.TextField(max_length=2000, verbose_name="內容")
+    body = models.TextField(max_length=2000, blank=True, verbose_name="內容")
+    # 聊天圖片是私人對話內容：存在 private_media/，只能透過 ChatImageView（檢查是不是聊天的兩人）讀取
+    image = models.ImageField(
+        upload_to=RandomName("chat"),
+        storage=get_private_storage,
+        blank=True,
+        verbose_name="圖片",
+    )
     is_read = models.BooleanField(default=False, verbose_name="已讀")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="傳送時間")
 
@@ -145,17 +155,26 @@ class Message(models.Model):
         ordering = ("created_at", "id")
 
     def __str__(self):
-        return f"{self.sender}：{self.body[:20]}"
+        return f"{self.sender}：{self.body[:20] or '（圖片）'}"
 
     def to_dict(self, viewer):
         """轉成 JSON 給聊天室的 JavaScript 使用。"""
         from django.utils import timezone
 
         local = timezone.localtime(self.created_at)
+        from django.urls import reverse
+
         return {
             "id": self.id,
             "body": self.body,
+            "image_url": reverse("matching:chat-image", args=[self.match_request_id, self.id]) if self.image else "",
             "mine": self.sender_id == viewer.id,
             "time": local.strftime("%H:%M"),
             "date": local.strftime("%Y-%m-%d"),
         }
+
+
+@receiver(post_delete, sender=Message)
+def delete_message_image(sender, instance, **kwargs):
+    if instance.image:
+        instance.image.delete(save=False)

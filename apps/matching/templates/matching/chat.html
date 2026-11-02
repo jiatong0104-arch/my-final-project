@@ -29,7 +29,15 @@
         {% endifchanged %}
         <div class="flex {% if message.sender_id == user.id %}justify-end{% endif %}" data-id="{{ message.id }}">
           <div class="max-w-[80%]">
-            <p class="whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 leading-6 {% if message.sender_id == user.id %}rounded-br-md bg-ink text-white{% else %}rounded-bl-md border border-grid bg-white{% endif %}">{{ message.body }}</p>
+            {% if message.image %}
+              {% url 'matching:chat-image' match.id message.id as image_url %}
+              <a href="{{ image_url }}" target="_blank" rel="noopener" class="block {% if message.sender_id == user.id %}ml-auto{% endif %} w-fit">
+                <img src="{{ image_url }}" alt="{% if message.sender_id == user.id %}你{% else %}{{ other_name }}{% endif %}傳的圖片" loading="lazy" class="max-h-72 max-w-full rounded-2xl border border-grid bg-white object-contain">
+              </a>
+            {% endif %}
+            {% if message.body %}
+              <p class="{% if message.image %}mt-1 {% endif %}whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 leading-6 {% if message.sender_id == user.id %}rounded-br-md bg-ink text-white{% else %}rounded-bl-md border border-grid bg-white{% endif %}">{{ message.body }}</p>
+            {% endif %}
             <p class="mt-1 text-xs text-soft {% if message.sender_id == user.id %}text-right{% endif %}">{{ message.created_at|time:"H:i" }}</p>
           </div>
         </div>
@@ -44,10 +52,22 @@
     </div>
 
     {# 輸入框 #}
-    <form id="chat-form" method="post" class="flex items-end gap-2 border-t border-grid p-3 sm:p-4">
+    {# 選好、還沒送出的圖片預覽 #}
+    <div id="chat-preview" class="hidden items-center gap-3 border-t border-grid bg-paper/60 px-4 py-3">
+      <img id="chat-preview-image" alt="準備傳送的圖片" class="h-16 w-16 rounded-lg border border-grid object-cover">
+      <p class="flex-1 text-sm text-soft">按「送出」傳送這張圖片，也可以再打幾個字。</p>
+      <button type="button" id="chat-preview-remove" class="rounded-lg px-3 py-1.5 text-sm font-medium text-soft hover:bg-white hover:text-ink">✕ 取消</button>
+    </div>
+
+    <form id="chat-form" method="post" enctype="multipart/form-data" class="flex items-end gap-2 border-t border-grid p-3 sm:p-4" data-image-limit="{{ image_limit }}">
       {% csrf_token %}
+      <label class="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border-[1.5px] border-[#CBD3E0] text-soft hover:border-student hover:text-student has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-student/30" title="傳送圖片">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5L5 19"/></svg>
+        <span class="sr-only">傳送圖片</span>
+        <input type="file" id="id_image" name="image" accept="image/*" class="sr-only">
+      </label>
       <label for="id_body" class="sr-only">訊息</label>
-      <textarea id="id_body" name="body" rows="1" maxlength="2000" required placeholder="輸入訊息…（Enter 送出，Shift + Enter 換行）" class="max-h-40 min-h-[2.75rem] flex-1 resize-none rounded-xl border-[1.5px] border-[#CBD3E0] px-3.5 py-2.5 focus:border-student focus:outline-none focus:ring-[3px] focus:ring-student/20"></textarea>
+      <textarea id="id_body" name="body" rows="1" maxlength="2000" placeholder="輸入訊息…（Enter 送出，Shift + Enter 換行）" class="max-h-40 min-h-[2.75rem] flex-1 resize-none rounded-xl border-[1.5px] border-[#CBD3E0] px-3.5 py-2.5 focus:border-student focus:outline-none focus:ring-[3px] focus:ring-student/20"></textarea>
       <button type="submit" class="h-11 shrink-0 rounded-xl bg-student px-5 font-bold text-white hover:bg-student-dark disabled:opacity-50">送出</button>
     </form>
     <p id="chat-error" class="hidden px-4 pb-3 text-sm font-medium text-teacher" role="alert"></p>

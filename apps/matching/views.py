@@ -6,6 +6,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
 
+from apps.core import modes
+from apps.core.files import private_file_response
+from apps.core.uploads import limit_mb
 from apps.tutors.models import TutorProfile
 
 from .forms import MatchRequestForm, MessageForm, ReviewForm, TutorReplyForm
@@ -95,9 +98,10 @@ class MyMatchesView(LoginRequiredMixin, View):
 
         tab = request.GET.get("tab")
         if tab not in ("sent", "received") or (tab == "received" and not tutor):
-            # 老師有待回覆邀請時，預設先看「我收到的」
+            # 老師模式，或老師有待回覆邀請時，預設先看「我收到的」
             has_pending = tutor and received.filter(status=MatchRequest.Status.PENDING).exists()
-            tab = "received" if has_pending else "sent"
+            teacher_mode = tutor and modes.get_mode(request) == modes.TEACHER
+            tab = "received" if (has_pending or teacher_mode) else "sent"
 
         context = {
             "tab": tab,
@@ -215,16 +219,17 @@ class ChatView(LoginRequiredMixin, View):
             "form": MessageForm(),
             "other_name": match.other_party_name(request.user),
             "is_student": request.user.id == match.student_id,
+            "image_limit": limit_mb("image"),
         }
         return render(request, self.template_name, context)
 
     def post(self, request, match_id):
         match = get_chat_match(request, match_id)
-        form = MessageForm(request.POST)
+        form = MessageForm(request.POST, request.FILES)
         wants_json = request.headers.get("Accept", "").startswith("application/json")
 
         if not form.is_valid():
-            error = form.errors["body"][0]
+            error = form.first_error()
             if wants_json:
                 return JsonResponse({"error": error}, status=400)
             messages.error(request, error)
@@ -234,6 +239,7 @@ class ChatView(LoginRequiredMixin, View):
             match_request=match,
             sender=request.user,
             body=form.cleaned_data["body"],
+            image=form.cleaned_data["image"],
         )
         if wants_json:
             return JsonResponse({"message": message.to_dict(request.user)}, status=201)
@@ -257,3 +263,16 @@ class ChatMessagesView(LoginRequiredMixin, View):
         after = request.GET.get("after", "0")
         new_messages = match.messages.filter(id__gt=int(after) if after.isdigit() else 0)
         return JsonResponse({"messages": [m.to_dict(request.user) for m in new_messages]})
+
+
+class ChatImageView(LoginRequiredMixin, View):
+    """聊天室的圖片：先用 get_chat_match 確認是聊天的兩人，再從這個聊天室裡找圖片。
+
+    圖片存在 private_media/，沒有公開網址；就算有人拿到這個網址，
+    不是聊天的兩人（或沒登入）一律 404，看不到圖片。
+    """
+
+    def get(self, request, match_id, message_id):
+        match = get_chat_match(request, match_id)
+        message = get_object_or_404(match.messages.exclude(image=""), id=message_id)
+        return private_file_response(message.image)

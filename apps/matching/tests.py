@@ -3,6 +3,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.models import UserProfile
+from apps.core.testing import TempMediaMixin, make_image
 from apps.tutors.models import Subject, TutorProfile
 
 from .models import MatchRequest, Message, Review
@@ -143,7 +144,8 @@ class TutorProfileTests(TestCase):
             "bio": "我會用例子教你",
             "school_choice": "國立清華大學",
             "department_choice": "物理學系",
-            "degree": "master",
+            "education_level": "master",
+            "education_status": "graduated",
             "years_of_experience": 2,
             "hourly_rate_min": 700,
             "hourly_rate_max": 900,
@@ -382,5 +384,70 @@ class ChatTests(TestCase):
     def test_blank_message_rejected(self):
         self.client.login(username="student", password="pass12345")
         response = self.client.post(self.chat_url, {"body": "   "}, HTTP_ACCEPT="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Message.objects.exists())
+
+
+class ChatImageTests(TempMediaMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        math = Subject.objects.create(name="數學", level=Subject.Level.JUNIOR)
+        self.tutor = make_tutor("teacher", math)
+        self.student = User.objects.create_user(username="student", password="pass12345")
+        User.objects.create_user(username="stranger", password="pass12345")
+        self.match = MatchRequest.objects.create(
+            student=self.student, tutor=self.tutor, subject=math,
+            message="hi", preferred_schedule="週六", student_contact="LINE",
+            status=MatchRequest.Status.ACCEPTED,
+        )
+        self.chat_url = reverse("matching:chat", args=[self.match.id])
+
+    def send_image(self, body=""):
+        self.client.login(username="student", password="pass12345")
+        return self.client.post(self.chat_url, {"body": body, "image": make_image("我的作業.jpg")}, HTTP_ACCEPT="application/json")
+
+    def test_send_image_only(self):
+        response = self.send_image()
+        self.assertEqual(response.status_code, 201)
+        message = Message.objects.get()
+        self.assertEqual(message.body, "")
+        self.assertEqual(response.json()["message"]["image_url"], reverse("matching:chat-image", args=[self.match.id, message.id]))
+        # 圖片存在私密資料夾，沒有公開網址
+        self.assertTrue(message.image.path.startswith(self._private))
+        with self.assertRaises(ValueError):
+            message.image.url
+
+    def test_only_the_two_participants_can_see_image(self):
+        self.send_image("這題不會")
+        image_url = reverse("matching:chat-image", args=[self.match.id, Message.objects.get().id])
+
+        self.assertEqual(self.client.get(image_url).status_code, 200)  # 學生（傳送者）
+        self.client.login(username="teacher", password="pass12345")
+        response = self.client.get(image_url)
+        self.assertEqual(response.status_code, 200)  # 老師
+        self.assertEqual(response["Content-Type"], "image/jpeg")
+
+        self.client.login(username="stranger", password="pass12345")
+        self.assertEqual(self.client.get(image_url).status_code, 404)  # 其他人
+        self.client.logout()
+        self.assertEqual(self.client.get(image_url).status_code, 302)  # 沒登入 → 登入頁
+
+    def test_image_url_must_match_chat(self):
+        """用自己聊天室的網址，換別人訊息的編號，也拿不到圖片。"""
+        self.send_image()
+        other_match = MatchRequest.objects.create(
+            student=User.objects.get(username="stranger"), tutor=self.tutor, subject=self.match.subject,
+            message="hi", preferred_schedule="週日", student_contact="LINE", status=MatchRequest.Status.ACCEPTED,
+        )
+        self.client.login(username="stranger", password="pass12345")
+        url = reverse("matching:chat-image", args=[other_match.id, Message.objects.get().id])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_non_image_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.client.login(username="student", password="pass12345")
+        fake = SimpleUploadedFile("a.jpg", b"not an image", content_type="image/jpeg")
+        response = self.client.post(self.chat_url, {"image": fake}, HTTP_ACCEPT="application/json")
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Message.objects.exists())

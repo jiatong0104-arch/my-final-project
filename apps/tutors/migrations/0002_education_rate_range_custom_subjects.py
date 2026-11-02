@@ -1,9 +1,10 @@
+
 from django.db import migrations, models
 import django.core.validators
 
 
 def copy_rate_and_education(apps, schema_editor):
-    """把舊資料搬到新欄位：最高時薪先等於原本的時薪；舊的「學歷」文字放進學校欄位。"""
+    """把舊資料搬到新欄位：最高時薪先等於原本的時薪；舊的學歷文字放進學校欄位。"""
     TutorProfile = apps.get_model("tutors", "TutorProfile")
     for tutor in TutorProfile.objects.all():
         tutor.hourly_rate_max = tutor.hourly_rate_min

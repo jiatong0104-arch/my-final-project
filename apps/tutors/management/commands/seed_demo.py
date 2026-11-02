@@ -12,7 +12,7 @@ from allauth.account.models import EmailAddress
 
 from apps.accounts.models import UserProfile
 from apps.matching.models import MatchRequest, Message, Review
-from apps.tutors.models import Subject, TutorProfile
+from apps.tutors.models import Subject, TutorPost, TutorProfile
 
 DEMO_PASSWORD = "demo1234"
 
@@ -25,11 +25,21 @@ SUBJECTS = [
     ("多益 TOEIC", L.GENERAL), ("日文", L.GENERAL), ("鋼琴", L.GENERAL),
 ]
 
+# 老師主頁的動態（只有文字；照片、影片請登入後自己上傳試試看）
+POSTS = [
+    ("teacher", "這週和國二的學生一起把「一次函數」畫成生活中的計程車費，算式一下子就變得有意思了。\n下週要挑戰斜率，歡迎想一起練習的同學來找我！"),
+    ("teacher", "整理了國中數學常錯的 10 個觀念，上課時會用到，已經上課的同學可以在聊天室跟我要檔案。"),
+    ("tutor_wang", "多益 900 分的準備方法，其實就是每天 30 分鐘的聽力 + 錯題本。分享給正在準備的大家。"),
+]
+
+# 這幾位老師還沒通過身分認證（列表上不會有「已認證」標章）
+UNVERIFIED = {"teacher", "tutor_huang", "tutor_wu"}
+
 TUTORS = [
     {
         "username": "teacher", "name": "林思妤",
         "headline": "讓數學變成你最有把握的一科",
-        "school": "國立臺灣大學", "department": "數學系", "degree": "bachelor",
+        "school": "國立臺灣大學", "department": "數學系", "education_level": "bachelor", "education_status": "graduated",
         "years": 4, "rate": (700, 1000),
         "city": "taipei", "mode": "both",
         "subjects": [("數學", L.JUNIOR), ("數學", L.SENIOR), ("微積分", L.COLLEGE)],
@@ -38,7 +48,7 @@ TUTORS = [
     {
         "username": "tutor_chen", "name": "陳柏翰",
         "headline": "物理化學不靠死背，靠理解",
-        "school": "國立清華大學", "department": "物理學系", "degree": "master",
+        "school": "國立清華大學", "department": "物理學系", "education_level": "master", "education_status": "graduated",
         "years": 6, "rate": (900, 1300),
         "city": "new_taipei", "mode": "in_person",
         "subjects": [("理化", L.JUNIOR), ("物理", L.SENIOR), ("化學", L.SENIOR)],
@@ -47,7 +57,7 @@ TUTORS = [
     {
         "username": "tutor_wang", "name": "王語涵",
         "headline": "多益 900+，帶你用對方法學英文",
-        "school": "國立政治大學", "department": "英國語文學系", "degree": "bachelor",
+        "school": "國立政治大學", "department": "英國語文學系", "education_level": "bachelor", "education_status": "graduated",
         "years": 5, "rate": (800, 1200),
         "city": "taipei", "mode": "online",
         "subjects": [("英文", L.JUNIOR), ("英文", L.SENIOR), ("多益 TOEIC", L.GENERAL)],
@@ -56,7 +66,7 @@ TUTORS = [
     {
         "username": "tutor_huang", "name": "黃冠宇",
         "headline": "統計系學長，期中期末救火隊",
-        "school": "國立臺北大學", "department": "統計學系", "degree": "bachelor_student",
+        "school": "國立臺北大學", "department": "統計學系", "education_level": "bachelor", "education_status": "studying",
         "years": 2, "rate": (500, 700),
         "city": "new_taipei", "mode": "both",
         "subjects": [("統計學", L.COLLEGE), ("微積分", L.COLLEGE), ("經濟學", L.COLLEGE)],
@@ -65,7 +75,7 @@ TUTORS = [
     {
         "username": "tutor_lee", "name": "李承恩",
         "headline": "零基礎也能寫出第一個 Python 程式",
-        "school": "國立陽明交通大學", "department": "資訊工程學系", "degree": "master",
+        "school": "國立陽明交通大學", "department": "資訊工程學系", "education_level": "master", "education_status": "graduated",
         "years": 3, "rate": (1000, 1500),
         "city": "taoyuan", "mode": "online",
         "subjects": [("Python 程式設計", L.COLLEGE), ("數學", L.SENIOR)],
@@ -74,7 +84,7 @@ TUTORS = [
     {
         "username": "tutor_tsai", "name": "蔡佳穎",
         "headline": "溫柔有耐心，國小孩子的學習夥伴",
-        "school": "國立臺北教育大學", "department": "教育學系", "degree": "bachelor",
+        "school": "國立臺北教育大學", "department": "教育學系", "education_level": "bachelor", "education_status": "graduated",
         "years": 7, "rate": (600, 800),
         "city": "taichung", "mode": "in_person",
         "subjects": [("數學", L.ELEMENTARY), ("國語", L.ELEMENTARY), ("英文", L.ELEMENTARY), ("社會", L.ELEMENTARY)],
@@ -83,7 +93,7 @@ TUTORS = [
     {
         "username": "tutor_chang", "name": "張雅婷",
         "headline": "國文作文從 B 到 A+ 的關鍵",
-        "school": "國立臺灣師範大學", "department": "國文學系", "degree": "master",
+        "school": "國立臺灣師範大學", "department": "國文學系", "education_level": "master", "education_status": "graduated",
         "years": 8, "rate": (900, 1200),
         "city": "taipei", "mode": "both",
         "subjects": [("國文", L.JUNIOR), ("國文", L.SENIOR)],
@@ -92,7 +102,7 @@ TUTORS = [
     {
         "username": "tutor_liu", "name": "劉宇辰",
         "headline": "日文檢定 N1，日劇也能變教材",
-        "school": "東吳大學", "department": "日本語文學系", "degree": "bachelor",
+        "school": "東吳大學", "department": "日本語文學系", "education_level": "bachelor", "education_status": "graduated",
         "years": 3, "rate": (600, 800),
         "city": "tainan", "mode": "online",
         "subjects": [("日文", L.GENERAL)],
@@ -101,7 +111,7 @@ TUTORS = [
     {
         "username": "tutor_wu", "name": "吳品萱",
         "headline": "古典鋼琴與樂理，成人初學也歡迎",
-        "school": "國立臺灣藝術大學", "department": "音樂學系", "degree": "bachelor",
+        "school": "國立臺灣藝術大學", "department": "音樂學系", "education_level": "bachelor", "education_status": "graduated",
         "years": 10, "rate": (1000, 1400),
         "city": "kaohsiung", "mode": "in_person",
         "subjects": [("鋼琴", L.GENERAL)],
@@ -187,7 +197,10 @@ class Command(BaseCommand):
                     "bio": data["bio"],
                     "school": data["school"],
                     "department": data["department"],
-                    "degree": data["degree"],
+                    "education_level": data["education_level"],
+                    "education_status": data["education_status"],
+                    # teacher 留著未認證，展示「申請認證」的流程
+                    "is_verified": data["username"] not in UNVERIFIED,
                     "years_of_experience": data["years"],
                     "hourly_rate_min": data["rate"][0],
                     "hourly_rate_max": data["rate"][1],
@@ -231,6 +244,11 @@ class Command(BaseCommand):
                         body=body,
                         is_read=True,
                     )
+
+        for username, body in POSTS:
+            tutor_profile = users[username].tutor_profile
+            if not tutor_profile.posts.filter(body=body).exists():
+                TutorPost.objects.create(tutor=tutor_profile, body=body)
 
         self.stdout.write(self.style.SUCCESS("展示資料建立完成！"))
         self.stdout.write(f"  老師：teacher@demo.tw 或 0911000001，密碼 {DEMO_PASSWORD}（有一筆待回覆邀請）")

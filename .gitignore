@@ -11,3 +11,7 @@ wheels/
 
 .env
 db.sqlite3
+
+# 使用者上傳的檔案（不進 Git）
+media/
+private_media/

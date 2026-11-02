@@ -3,7 +3,7 @@
   <div class="flex items-start gap-4">
     <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full font-hand text-2xl font-bold {{ tutor.id|avatar_color }}">{{ tutor.initial }}</span>
     <div class="min-w-0">
-      <p class="text-lg font-bold group-hover:text-student">{{ tutor.display_name }}</p>
+      <p class="flex flex-wrap items-center gap-x-2 text-lg font-bold"><span class="group-hover:text-student">{{ tutor.display_name }}</span>{% include "tutors/_verified_badge.html" %}</p>
       <p class="truncate text-sm text-soft">{{ tutor.education }}</p>
       {% if tutor.review_count %}
         <p class="mt-1 text-sm"><span class="text-amber-500" aria-hidden="true">{{ tutor.avg_rating|stars }}</span> <span class="font-bold">{{ tutor.avg_rating|floatformat:1 }}</span> <span class="text-soft">（{{ tutor.review_count }} 則評價）</span></p>

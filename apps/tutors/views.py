@@ -2,13 +2,18 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.db.models import Avg, Count, Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 
+from apps.core import modes
+from apps.core.files import private_file_response
+from apps.core.uploads import limit_mb
 from apps.matching.models import MatchRequest, Review
 
-from .forms import TutorProfileForm
-from .models import Subject, TutorProfile
+from .forms import TutorPostForm, TutorProfileForm, VerificationForm
+from .models import Subject, TutorPost, TutorProfile, VerificationRequest
 
 SORT_OPTIONS = {
     "rating": ("評價最高", ("-avg_rating", "-review_count", "-created_at")),
@@ -38,6 +43,7 @@ class TutorListView(View):
             "city": request.GET.get("city", ""),
             "mode": request.GET.get("mode", ""),
             "max_rate": request.GET.get("max_rate", "").strip(),
+            "verified": request.GET.get("verified", ""),
             "sort": request.GET.get("sort", "rating"),
         }
 
@@ -72,6 +78,9 @@ class TutorListView(View):
             # 預算內：老師的最低時薪不超過預算
             tutors = tutors.filter(hourly_rate_min__lte=int(params["max_rate"]))
 
+        if params["verified"] == "1":
+            tutors = tutors.filter(is_verified=True)
+
         if params["sort"] not in SORT_OPTIONS:
             params["sort"] = "rating"
         tutors = tutors.order_by(*SORT_OPTIONS[params["sort"]][1])
@@ -82,7 +91,7 @@ class TutorListView(View):
         query = request.GET.copy()
         query.pop("page", None)
 
-        active_filters = any(params[key] for key in ("q", "subject", "level", "city", "mode", "max_rate"))
+        active_filters = any(params[key] for key in ("q", "subject", "level", "city", "mode", "max_rate", "verified"))
 
         context = {
             "page": page,
@@ -101,7 +110,7 @@ class TutorListView(View):
 class TutorDetailView(View):
     """老師詳細頁：用路徑參數找到一位老師。"""
 
-    def get(self, request, tutor_id):
+    def get(self, request, tutor_id, post_form=None, status=200):
         tutor = get_object_or_404(
             with_rating(
                 TutorProfile.objects.select_related("user", "user__profile").prefetch_related("subjects")
@@ -124,11 +133,16 @@ class TutorDetailView(View):
         context = {
             "tutor": tutor,
             "reviews": reviews,
+            "posts": tutor.posts.all(),
             "is_owner": is_owner,
             "pending_request": pending_request,
             "accepted_request": accepted_request,
         }
-        return render(request, "tutors/tutor_detail.html", context)
+        if is_owner:
+            context["post_form"] = post_form or TutorPostForm()
+            context["upload_limits"] = TutorPostForm.limits()
+            context["verification"] = tutor.verifications.first()
+        return render(request, "tutors/tutor_detail.html", context, status=status)
 
 
 class TutorProfileCreateView(LoginRequiredMixin, View):
@@ -154,6 +168,7 @@ class TutorProfileCreateView(LoginRequiredMixin, View):
         tutor.user = request.user  # 擁有者一律是目前登入的人，不從表單接收
         tutor.save()
         form.save_m2m()
+        modes.set_mode(request, modes.TEACHER)
         messages.success(request, "老師檔案建立完成！學生現在可以找到你了。")
         return redirect("tutors:detail", tutor_id=tutor.id)
 
@@ -177,11 +192,17 @@ class TutorProfileUpdateView(LoginRequiredMixin, View):
         if tutor is None:
             return redirect("tutors:profile-create")
 
+        education_before = tutor.education
         form = TutorProfileForm(request.POST, instance=tutor)
         if not form.is_valid():
             return render(request, self.template_name, {"form": form, "tutor": tutor}, status=400)
 
-        form.save()
+        tutor = form.save()
+        if tutor.is_verified and tutor.education != education_before:
+            # 認證的是「舊的學歷」，改了學歷就要重新審核
+            tutor.is_verified = False
+            tutor.save(update_fields=["is_verified"])
+            messages.info(request, "你修改了學歷，「已認證」標章先拿掉了。重新上傳證件，審核通過後就會恢復。")
         messages.success(request, "老師檔案已更新。")
         return redirect("tutors:detail", tutor_id=tutor.id)
 
@@ -216,3 +237,91 @@ class TutorProfileDeleteView(LoginRequiredMixin, View):
         tutor.delete()
         messages.success(request, "老師檔案已刪除。你的帳號還在，之後想教學可以重新建立。")
         return redirect("core:home")
+
+
+def get_own_tutor(request):
+    return TutorProfile.objects.filter(user=request.user).first()
+
+
+class TutorVerificationView(LoginRequiredMixin, View):
+    """老師申請身分認證：在學上傳學生證，畢業上傳畢業證書。"""
+
+    template_name = "tutors/verification.html"
+
+    def render_page(self, request, tutor, form, status=200):
+        context = {
+            "tutor": tutor,
+            "form": form,
+            "history": tutor.verifications.all()[:5],
+            "pending": tutor.verifications.filter(status=VerificationRequest.Status.PENDING).first(),
+            "is_student": tutor.education_status == TutorProfile.EducationStatus.STUDYING,
+            "limit_mb": limit_mb("document"),
+        }
+        return render(request, self.template_name, context, status=status)
+
+    def get(self, request):
+        tutor = get_own_tutor(request)
+        if tutor is None:
+            return redirect("tutors:profile-create")
+        return self.render_page(request, tutor, VerificationForm())
+
+    def post(self, request):
+        tutor = get_own_tutor(request)
+        if tutor is None:
+            return redirect("tutors:profile-create")
+        if tutor.is_verified or tutor.verifications.filter(status=VerificationRequest.Status.PENDING).exists():
+            messages.info(request, "你已經認證過，或是還有一筆申請在審核中。")
+            return redirect("tutors:verify")
+
+        form = VerificationForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return self.render_page(request, tutor, form, status=400)
+
+        VerificationRequest.objects.create(
+            tutor=tutor,
+            document=form.cleaned_data["document"],
+            education_snapshot=tutor.education,
+        )
+        messages.success(request, "證件已送出！審核通過後，你的檔案會出現「已認證」標章。")
+        return redirect("tutors:verify")
+
+
+class VerificationDocumentView(LoginRequiredMixin, View):
+    """證件檔案只給「有權限查看認證申請」的管理員看；其他人（包含老師本人）一律 404。"""
+
+    def get(self, request, verification_id):
+        if not request.user.has_perm("tutors.view_verificationrequest"):
+            raise Http404
+        verification = get_object_or_404(VerificationRequest, id=verification_id)
+        if not verification.document:
+            raise Http404("審核完成後，證件檔案已經刪除。")
+        return private_file_response(verification.document)
+
+
+class TutorPostCreateView(LoginRequiredMixin, View):
+    """在自己的主頁發動態。"""
+
+    def post(self, request):
+        tutor = get_own_tutor(request)
+        if tutor is None:
+            return redirect("tutors:profile-create")
+        form = TutorPostForm(request.POST, request.FILES)
+        if not form.is_valid():
+            # 顯示同一頁並保留剛剛打的文字（上傳的檔案瀏覽器不會保留，需要重選）
+            return TutorDetailView().get(request, tutor.id, post_form=form, status=400)
+        post = form.save(commit=False)
+        post.tutor = tutor
+        post.save()
+        messages.success(request, "動態已發布！")
+        return redirect(f"{reverse('tutors:detail', args=[tutor.id])}#post-{post.id}")
+
+
+class TutorPostDeleteView(LoginRequiredMixin, View):
+    """刪除自己的動態：只查得到自己的，別人的一律 404。"""
+
+    def post(self, request, post_id):
+        post = get_object_or_404(TutorPost, id=post_id, tutor__user=request.user)
+        tutor_id = post.tutor_id
+        post.delete()
+        messages.info(request, "動態已刪除。")
+        return redirect(f"{reverse('tutors:detail', args=[tutor_id])}#posts")

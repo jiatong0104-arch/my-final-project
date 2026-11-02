@@ -1,0 +1,80 @@
+{% extends "core/base.html" %}
+
+{% block title %}身分認證{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl px-4 pt-10 sm:px-6">
+  <a href="{% url 'tutors:detail' tutor.id %}" class="text-sm font-medium text-soft hover:text-teacher">← 回到我的主頁</a>
+
+  <div class="mt-4 flex items-center gap-4">
+    <span class="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+      <svg width="28" height="28" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m3 8.5 3.2 3L13 4.5"/></svg>
+    </span>
+    <div>
+      <h1 class="font-hand text-4xl font-bold">身分認證</h1>
+      <p class="mt-1 text-soft">通過後，你的檔案會出現「已認證」標章，學生也能篩選只看認證過的老師。</p>
+    </div>
+  </div>
+
+  <div class="mt-8 rounded-3xl border border-grid bg-white p-6 sm:p-8">
+    <p class="text-sm text-soft">你填寫的學歷</p>
+    <p class="mt-1 text-lg font-bold">{{ tutor.education }}</p>
+    <a href="{% url 'tutors:profile-edit' %}" class="mt-1 inline-block text-sm text-teacher underline">學歷不對？先去修改</a>
+
+    <div class="mt-6 border-t border-grid pt-6">
+      {% if tutor.is_verified %}
+        <p class="rounded-xl bg-emerald-50 px-4 py-3 font-bold text-emerald-800">✓ 你已通過認證。</p>
+      {% elif pending %}
+        <p class="rounded-xl bg-student-light px-4 py-3 text-student-dark"><strong>審核中</strong>：{{ pending.submitted_at|date:"n 月 j 日 H:i" }} 送出，通常 1–3 個工作天內完成。</p>
+      {% else %}
+        <form method="post" enctype="multipart/form-data" class="form-body" novalidate>
+          {% csrf_token %}
+          <h2 class="text-lg font-bold">上傳{% if is_student %}學生證{% else %}畢業證書{% endif %}</h2>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-soft">
+            {% if is_student %}
+              <li>拍學生證<strong class="text-ink">正面</strong>，要看得清楚<strong class="text-ink">學校、系所和姓名</strong>。</li>
+            {% else %}
+              <li>拍畢業證書（或學位證書），要看得清楚<strong class="text-ink">學校、系所、學位和姓名</strong>。</li>
+            {% endif %}
+            <li>可以遮住學號、身分證字號等號碼，不影響審核。</li>
+            <li>手機拍照、掃描的 PDF 都可以，{{ limit_mb }} MB 以內。</li>
+          </ul>
+
+          <label class="mt-5 flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-[#CBD3E0] px-4 py-8 text-center font-normal hover:border-emerald-600 hover:bg-emerald-50 has-[:focus-visible]:border-emerald-600">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="text-soft" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <span class="text-lg font-bold">點這裡選擇照片或檔案</span>
+            <span id="document-name" class="text-sm text-soft">手機會直接打開相機或相簿</span>
+            <input type="file" name="document" accept="image/*,application/pdf" class="sr-only" required
+                   onchange="document.getElementById('document-name').textContent = this.files[0] ? '已選擇：' + this.files[0].name : ''">
+          </label>
+          {% for error in form.document.errors %}<p class="mt-2 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+
+          <button type="submit" class="mt-6 w-full rounded-xl bg-emerald-700 px-6 py-3 font-bold text-white hover:bg-emerald-800">送出審核</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-6 rounded-2xl bg-paper p-5 text-sm leading-6 text-soft ring-1 ring-grid">
+    <p class="font-bold text-ink">你的證件怎麼被保護</p>
+    <ul class="mt-2 list-disc space-y-1 pl-5">
+      <li>證件不會公開，也沒有可以分享的網址；只有網站管理員能在審核時查看。</li>
+      <li>審核完成（不論通過與否）後，證件檔案會立刻刪除，只留下審核結果。</li>
+      <li>之後修改學歷，標章會先拿掉，需要重新認證。</li>
+    </ul>
+  </div>
+
+  {% if history %}
+    <h2 class="mt-8 font-bold">申請紀錄</h2>
+    <ul class="mt-3 divide-y divide-grid rounded-2xl border border-grid bg-white">
+      {% for item in history %}
+        <li class="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3">
+          <span>{{ item.submitted_at|date:"Y/n/j" }}　{{ item.education_snapshot }}</span>
+          <span class="font-bold {% if item.status == 'approved' %}text-emerald-700{% elif item.status == 'rejected' %}text-teacher{% else %}text-student{% endif %}">{{ item.get_status_display }}</span>
+          {% if item.status == "rejected" and item.admin_note %}<p class="w-full text-sm text-soft">原因：{{ item.admin_note }}</p>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endblock %}
