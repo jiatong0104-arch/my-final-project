@@ -16,8 +16,10 @@
   <header class="sticky top-0 z-40 border-b border-grid bg-paper/95 backdrop-blur">
     <nav class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
       <a href="{% url 'core:home' %}" class="flex items-center gap-2" aria-label="良師配 首頁">
-        {# 左上角依模式顯示「學」（學生，藍）或「師」（老師，紅） #}
+        {# 左上角依模式顯示「學」（學生，藍）或「師」（老師，紅）；首頁、登入這類不分身分的頁面顯示「學｜師」各一半 #}
+        {% block nav_logo %}
         <span class="tianzige grid h-9 w-9 place-items-center font-hand text-xl font-bold {% if is_teacher_mode %}text-teacher{% else %}text-student{% endif %}" title="{% if is_teacher_mode %}老師模式{% else %}學生模式{% endif %}"><span>{% if is_teacher_mode %}師{% else %}學{% endif %}</span></span>
+        {% endblock %}
         <span class="font-hand text-2xl font-bold tracking-wide">良師配</span>
       </a>
 

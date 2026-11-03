@@ -142,7 +142,7 @@ class TutorProfileTests(TestCase):
             "headline": "物理系學長",
             "subjects": [self.math.id],
             "bio": "我會用例子教你",
-            "school_choice": "國立清華大學",
+            "school": "清大",
             "department_choice": "物理學系",
             "education_level": "master",
             "education_status": "graduated",
@@ -213,8 +213,7 @@ class TutorProfileTests(TestCase):
         self.client.login(username="newbie", password="pass12345")
         data = {
             **self.form_data,
-            "school_choice": "__other__",
-            "school_other": "加州大學柏克萊分校",
+            "school": "加州大學柏克萊分校",
             "subjects": [],
             "other_subjects_1": "作文、閱讀理解",
         }
@@ -226,12 +225,16 @@ class TutorProfileTests(TestCase):
         self.assertEqual(names, ["作文", "閱讀理解"])
         self.assertTrue(all(tutor.subjects.values_list("is_custom", flat=True)))
 
-    def test_school_other_requires_text(self):
+    def test_school_required(self):
         self.client.login(username="newbie", password="pass12345")
-        data = {**self.form_data, "school_choice": "__other__", "school_other": ""}
-        response = self.client.post(reverse("tutors:profile-create"), data)
+        response = self.client.post(reverse("tutors:profile-create"), {**self.form_data, "school": "  "})
         self.assertEqual(response.status_code, 400)
-        self.assertIn("school_other", response.context["form"].errors)
+        self.assertIn("school", response.context["form"].errors)
+
+    def test_school_alias_saved_as_full_name(self):
+        self.client.login(username="newbie", password="pass12345")
+        self.client.post(reverse("tutors:profile-create"), {**self.form_data, "school": "國立台灣 大學"})
+        self.assertEqual(TutorProfile.objects.get().school, "國立臺灣大學")
 
     def test_rate_range_must_be_ordered(self):
         self.client.login(username="newbie", password="pass12345")

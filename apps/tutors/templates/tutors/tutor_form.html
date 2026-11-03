@@ -58,13 +58,17 @@
       </fieldset>
     </div>
     <div class="grid gap-x-5 sm:grid-cols-2">
-      <div>
-        <div data-school-select>
-          {% include "core/includes/field.html" with field=form.school_choice hide_optional=True %}
+      <div class="mb-5">
+        <label for="id_school" class="mb-1.5 block font-bold" data-school-label>學校</label>
+        <div class="relative" data-combobox>
+          {{ form.school }}
+          {# 打字時出現的建議清單（tutor_form.js 產生內容） #}
+          <ul id="school-listbox" role="listbox" aria-label="學校建議" hidden
+              class="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-xl border border-grid bg-white py-1 shadow-lg"></ul>
         </div>
-        <div data-other-for="{{ form.school_choice.id_for_label }}">
-          {% include "core/includes/field.html" with field=form.school_other hide_optional=True %}
-        </div>
+        <span class="help" data-school-help>可以輸入簡稱，例如「台大」「北科」；清單上沒有的，直接輸入完整校名。</span>
+        {% for error in form.school.errors %}<p class="mt-1.5 text-sm font-medium text-teacher">{{ error }}</p>{% endfor %}
+        {{ form.school_options|json_script:"school-options" }}
       </div>
       <div data-department>
         {% include "core/includes/field.html" with field=form.department_choice hide_optional=True %}
@@ -73,7 +77,7 @@
         </div>
       </div>
     </div>
-    <p class="help -mt-2 mb-2">修改學歷後，「已認證」標章會先拿掉，重新上傳證件審核通過後再恢復。</p>
+    <p class="help -mt-2 mb-2">修改學歷後，「學歷已認證」標章會先拿掉，重新上傳證件審核通過後再恢復。</p>
 
     {# ───── 可教科目 ───── #}
     <h2 class="mb-1 mt-8 border-b border-grid pb-2 text-lg font-bold text-teacher">可教科目</h2>

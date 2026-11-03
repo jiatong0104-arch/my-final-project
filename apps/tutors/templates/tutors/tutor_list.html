@@ -58,9 +58,18 @@
         <label for="max_rate">時薪上限</label>
         <input type="number" id="max_rate" name="max_rate" value="{{ params.max_rate }}" min="0" step="50" placeholder="例如 800">
       </p>
+      <fieldset class="mb-4">
+        <legend class="mb-2 font-bold">教學經驗</legend>
+        <div class="flex flex-wrap gap-2">
+          <label class="!inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-grid px-3 py-1.5 font-normal has-[:checked]:border-student has-[:checked]:bg-student-light"><input type="radio" name="exp" value="" {% if not params.exp %}checked{% endif %} class="accent-student"> 不限</label>
+          {% for value, label in experience_ranges %}
+            <label class="!inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-grid px-3 py-1.5 font-normal has-[:checked]:border-student has-[:checked]:bg-student-light"><input type="radio" name="exp" value="{{ value }}" {% if params.exp == value %}checked{% endif %} class="accent-student"> {{ label }}</label>
+          {% endfor %}
+        </div>
+      </fieldset>
       <label class="mb-5 !flex cursor-pointer items-center gap-2 rounded-lg border border-grid px-3 py-2 font-normal has-[:checked]:border-student has-[:checked]:bg-student-light">
         <input type="checkbox" name="verified" value="1" {% if params.verified == "1" %}checked{% endif %} class="h-4 w-4 accent-student">
-        只看「已認證」的老師
+        只看「已認證學歷」的老師
       </label>
       <input type="hidden" name="sort" value="{{ params.sort }}">
       <button type="submit" class="w-full rounded-xl bg-student px-4 py-2.5 font-bold text-white hover:bg-student-dark">套用篩選</button>

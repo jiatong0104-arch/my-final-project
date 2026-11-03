@@ -24,6 +24,16 @@ SORT_OPTIONS = {
 }
 
 
+# 教學經驗區間：網址參數 → (顯示文字, 最少年資, 最多年資)
+EXPERIENCE_RANGES = {
+    "0": ("未滿 1 年", 0, 0),
+    "1-2": ("1–2 年", 1, 2),
+    "3-5": ("3–5 年", 3, 5),
+    "6-10": ("6–10 年", 6, 10),
+    "11-": ("10 年以上", 11, None),
+}
+
+
 def with_rating(queryset):
     """替老師加上平均評分與評價數（透過 媒合邀請 → 評價 的關聯計算）。"""
     return queryset.annotate(
@@ -44,6 +54,7 @@ class TutorListView(View):
             "mode": request.GET.get("mode", ""),
             "max_rate": request.GET.get("max_rate", "").strip(),
             "verified": request.GET.get("verified", ""),
+            "exp": request.GET.get("exp", ""),
             "sort": request.GET.get("sort", "rating"),
         }
 
@@ -78,6 +89,11 @@ class TutorListView(View):
             # 預算內：老師的最低時薪不超過預算
             tutors = tutors.filter(hourly_rate_min__lte=int(params["max_rate"]))
 
+        if params["exp"] in EXPERIENCE_RANGES:
+            _, low, high = EXPERIENCE_RANGES[params["exp"]]
+            tutors = tutors.filter(years_of_experience__gte=low)
+            if high is not None:
+                tutors = tutors.filter(years_of_experience__lte=high)
         if params["verified"] == "1":
             tutors = tutors.filter(is_verified=True)
 
@@ -91,7 +107,7 @@ class TutorListView(View):
         query = request.GET.copy()
         query.pop("page", None)
 
-        active_filters = any(params[key] for key in ("q", "subject", "level", "city", "mode", "max_rate", "verified"))
+        active_filters = any(params[key] for key in ("q", "subject", "level", "city", "mode", "max_rate", "verified", "exp"))
 
         context = {
             "page": page,
@@ -102,6 +118,7 @@ class TutorListView(View):
             "subjects": Subject.objects.filter(Q(is_custom=False) | Q(tutors__isnull=False)).distinct(),
             "levels": Subject.Level.choices,
             "cities": TutorProfile.City.choices,
+            "experience_ranges": [(key, label) for key, (label, _, _) in EXPERIENCE_RANGES.items()],
             "sort_options": [(key, label) for key, (label, _) in SORT_OPTIONS.items()],
         }
         return render(request, "tutors/tutor_list.html", context)
@@ -202,7 +219,7 @@ class TutorProfileUpdateView(LoginRequiredMixin, View):
             # 認證的是「舊的學歷」，改了學歷就要重新審核
             tutor.is_verified = False
             tutor.save(update_fields=["is_verified"])
-            messages.info(request, "你修改了學歷，「已認證」標章先拿掉了。重新上傳證件，審核通過後就會恢復。")
+            messages.info(request, "你修改了學歷，「學歷已認證」標章先拿掉了。重新上傳證件，審核通過後就會恢復。")
         messages.success(request, "老師檔案已更新。")
         return redirect("tutors:detail", tutor_id=tutor.id)
 
@@ -282,7 +299,7 @@ class TutorVerificationView(LoginRequiredMixin, View):
             document=form.cleaned_data["document"],
             education_snapshot=tutor.education,
         )
-        messages.success(request, "證件已送出！審核通過後，你的檔案會出現「已認證」標章。")
+        messages.success(request, "證件已送出！審核通過後，你的檔案會出現「學歷已認證」標章。")
         return redirect("tutors:verify")
 
 

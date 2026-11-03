@@ -3,6 +3,8 @@
 
 {% block title %}首頁{% endblock %}
 
+{% block nav_logo %}{% include "core/includes/logo_split.html" %}{% endblock %}
+
 {% block content %}
 {# ───────── 身分選擇 ───────── #}
 <section class="mx-auto max-w-6xl px-4 pt-12 sm:px-6 sm:pt-16">
@@ -65,12 +67,20 @@
     <h3 class="text-xl font-bold">找家教，常常卡在這些地方</h3>
     <ul class="mt-6 divide-y divide-grid">
       <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
-        <p class="text-soft line-through decoration-student decoration-2">問了一圈親友，還是不知道哪位老師適合</p>
+        <p class="text-soft line-through decoration-student decoration-2">家教網的老師五花八門，卻都不符合我的需求</p>
         <p class="font-medium">依<span class="marker">科目、年級、地區、時薪</span>篩選，一次比較所有老師。</p>
       </li>
       <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
         <p class="text-soft line-through decoration-student decoration-2">不知道老師到底教得好不好</p>
+        <p class="font-medium">從老師主頁的<span class="marker">教學影片和貼文</span>，找到真正有能力的老師。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-student decoration-2">試教和實際上課怎麼落差這麼大</p>
         <p class="font-medium">每一則評價，都來自<span class="marker">真正上過課的學生</span>。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-student decoration-2">家教老師品質參差不齊，學歷真假難辨</p>
+        <p class="font-medium">老師上傳證件、經過審核，才有<span class="marker">「學歷已認證」</span>標章。</p>
       </li>
       <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
         <p class="text-soft line-through decoration-student decoration-2">還沒確定要上課，就得先把聯絡方式給陌生人</p>
@@ -137,6 +147,14 @@
       <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
         <p class="text-soft line-through decoration-teacher decoration-2">在社群貼招生文，訊息一下就被洗掉</p>
         <p class="font-medium">建立一份<span class="marker">老師檔案</span>，學生依科目就能找到你。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-teacher decoration-2">有能力，卻找不到試教的舞台</p>
+        <p class="font-medium">在主頁發<span class="marker">教學影片和貼文</span>，學生還沒上課就看得到你的實力。</p>
+      </li>
+      <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
+        <p class="text-soft line-through decoration-teacher decoration-2">家教費遲遲沒有到帳，又不好意思催款</p>
+        <p class="font-medium">學生預約時就<span class="marker">綁定信用卡</span>，雙方確認上課後，上課當天自動扣款。 <span class="ml-1 inline-block rounded-full bg-teacher-light px-2 py-0.5 align-middle text-xs font-bold text-teacher">即將推出</span></p>
       </li>
       <li class="grid gap-2 py-5 md:grid-cols-2 md:gap-10">
         <p class="text-soft line-through decoration-teacher decoration-2">學生的程度和需求，要來回問很久</p>

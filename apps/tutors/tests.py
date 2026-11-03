@@ -36,7 +36,7 @@ class EducationTests(TestCase):
         self.data = {
             "headline": "學長", "subjects": [self.math.id], "bio": "介紹",
             "education_level": "bachelor", "education_status": "studying",
-            "school_choice": "國立清華大學", "department_choice": "物理學系",
+            "school": "國立清華大學", "department_choice": "物理學系",
             "years_of_experience": 1, "hourly_rate_min": 500, "hourly_rate_max": 600,
             "city": "taipei", "teaching_mode": "online", "contact_info": "LINE", "is_accepting": "on",
         }
@@ -46,8 +46,8 @@ class EducationTests(TestCase):
         self.assertEqual(TutorProfile.objects.get().education, "國立清華大學 物理學系（大學在學）")
 
     def test_high_school_only_needs_school_name(self):
-        data = {**self.data, "education_level": "high_school", "school_choice": "", "department_choice": "",
-                "school_other": "臺北市立建國高級中學"}
+        data = {**self.data, "education_level": "high_school", "department_choice": "",
+                "school": "臺北市立建國高級中學"}
         response = self.client.post(reverse("tutors:profile-create"), data)
         self.assertEqual(response.status_code, 302)
         tutor = TutorProfile.objects.get()
@@ -55,10 +55,10 @@ class EducationTests(TestCase):
         self.assertEqual(tutor.education, "臺北市立建國高級中學（高中職在學）")
 
     def test_high_school_requires_school_name(self):
-        data = {**self.data, "education_level": "high_school", "school_other": ""}
+        data = {**self.data, "education_level": "high_school", "school": ""}
         response = self.client.post(reverse("tutors:profile-create"), data)
         self.assertEqual(response.status_code, 400)
-        self.assertIn("school_other", response.context["form"].errors)
+        self.assertIn("school", response.context["form"].errors)
 
     def test_university_requires_department(self):
         response = self.client.post(reverse("tutors:profile-create"), {**self.data, "department_choice": ""})
@@ -177,7 +177,18 @@ class VerificationTests(TempMediaMixin, TestCase):
         # 未認證的老師仍然會出現在一般列表
         response = self.client.get(reverse("tutors:list"))
         self.assertEqual(response.context["page"].paginator.count, 2)
-        self.assertContains(response, "已認證", count=2)  # 一個標章 + 一個篩選選項
+        self.assertContains(response, "學歷已認證", count=1)  # 只有一位老師有標章
+        self.assertContains(response, "只看「已認證學歷」的老師")
+
+    def test_experience_filter(self):
+        make_tutor("new", years_of_experience=0)
+        make_tutor("mid", years_of_experience=4)
+        make_tutor("senior", years_of_experience=12)
+        names = lambda exp: {t.user.username for t in self.client.get(reverse("tutors:list"), {"exp": exp}).context["page"].object_list}
+        self.assertEqual(names("0"), {"new", "teacher"})  # teacher 的年資預設 0
+        self.assertEqual(names("3-5"), {"mid"})
+        self.assertEqual(names("11-"), {"senior"})
+        self.assertEqual(len(names("亂打")), 4)  # 不認得的值就不篩選
 
 
 class TutorPostTests(TempMediaMixin, TestCase):
@@ -252,12 +263,17 @@ class ImageCleaningTests(TestCase):
 
 class ModeTests(TestCase):
     def test_switch_mode_changes_logo(self):
-        response = self.client.get(reverse("core:home"))
-        self.assertContains(response, "學生模式")
+        list_url = reverse("tutors:list")
+        self.assertContains(self.client.get(list_url), "學生模式")
 
         response = self.client.post(reverse("core:switch-mode"), {"mode": "teacher", "next": "/#teacher"})
         self.assertRedirects(response, "/#teacher", fetch_redirect_response=False)
-        self.assertContains(self.client.get(reverse("core:home")), "老師模式")
+        self.assertContains(self.client.get(list_url), "老師模式")
+
+    def test_home_shows_split_logo(self):
+        response = self.client.get(reverse("core:home"))
+        self.assertContains(response, "logo-split")
+        self.assertNotContains(response, "學生模式")
 
     def test_switch_mode_requires_post(self):
         self.assertEqual(self.client.get(reverse("core:switch-mode")).status_code, 405)
@@ -269,4 +285,4 @@ class ModeTests(TestCase):
     def test_tutor_defaults_to_teacher_mode(self):
         make_tutor("teacher")
         self.client.login(username="teacher", password=PASSWORD)
-        self.assertContains(self.client.get(reverse("core:home")), "老師模式")
+        self.assertContains(self.client.get(reverse("tutors:list")), "老師模式")

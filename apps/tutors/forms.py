@@ -24,14 +24,17 @@ def split_subject_names(text):
 
 
 class TutorProfileForm(forms.ModelForm):
-    # 學校、系所是否必填，要看最高學歷（高中職只填學校），所以在 clean() 裡檢查
-    school_choice = forms.ChoiceField(
-        label="學校", required=False, choices=grouped_choices(choices.SCHOOLS, "請選擇學校"),
+    # 學校很多間：用輸入框，邊打字邊顯示建議（tutor_form.js），清單上沒有的直接輸入完整校名
+    school = forms.CharField(
+        label="學校",
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            "placeholder": "輸入校名或簡稱，例如「台大」「成大」",
+            "autocomplete": "off",
+            "data-autocomplete": "school-options",
+        }),
     )
-    school_other = forms.CharField(
-        label="學校名稱", required=False, max_length=100,
-        widget=forms.TextInput(attrs={"placeholder": "請輸入學校名稱"}),
-    )
+    # 系所是否必填要看最高學歷（高中職不用填），所以在 clean() 裡檢查
     department_choice = forms.ChoiceField(
         label="系所", required=False, choices=grouped_choices(choices.DEPARTMENTS, "請選擇系所"),
     )
@@ -52,6 +55,7 @@ class TutorProfileForm(forms.ModelForm):
             "headline",
             "education_level",
             "education_status",
+            "school",
             "bio",
             "subjects",
             "hourly_rate_min",
@@ -88,15 +92,19 @@ class TutorProfileForm(forms.ModelForm):
                 widget=forms.TextInput(attrs={"placeholder": "例如：作文、閱讀理解（多個用頓號分隔）"}),
             )
 
-        # 編輯時，把已存的學校／系所放回下拉選單；不在清單裡的就放進「其他」
+        # 編輯時，把已存的系所放回下拉選單；不在清單裡的就放進「其他」
         if self.instance.pk:
-            for name, options in (("school", choices.SCHOOLS), ("department", choices.DEPARTMENTS)):
+            for name, options in (("department", choices.DEPARTMENTS),):
                 saved = getattr(self.instance, name)
                 if saved in choices.flat(options):
                     self.initial[f"{name}_choice"] = saved
                 elif saved:
                     self.initial[f"{name}_choice"] = choices.OTHER
                     self.initial[f"{name}_other"] = saved
+
+    def school_options(self):
+        """學校建議清單，模板用 json_script 交給 JavaScript。"""
+        return choices.school_suggestions()
 
     # ── 讓模板可以依年級分組顯示科目 ──
     def subjects_by_level(self):
@@ -120,14 +128,11 @@ class TutorProfileForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        # 「台大」「國立台灣大學」都存成正式名稱「國立臺灣大學」，搜尋和認證比較好對照
+        self.school_value = choices.canonical_school(cleaned.get("school"))
         if cleaned.get("education_level") == TutorProfile.EducationLevel.HIGH_SCHOOL:
-            # 高中職：清單裡都是大學，所以直接輸入校名，不用填系所
-            self.school_value = (cleaned.get("school_other") or "").strip()
-            if not self.school_value:
-                self.add_error("school_other", "請輸入學校名稱。")
-            self.department_value = ""
+            self.department_value = ""  # 高中職不用填系所
         else:
-            self.school_value = self._resolve("school", "學校")
             self.department_value = self._resolve("department", "系所")
 
         low, high = cleaned.get("hourly_rate_min"), cleaned.get("hourly_rate_max")

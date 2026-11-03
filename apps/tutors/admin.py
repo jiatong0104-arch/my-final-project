@@ -2,7 +2,7 @@ from django.contrib import admin, messages
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Subject, TutorPost, TutorProfile, VerificationRequest
+from .models import Subject, TutorProfile, TutorPost, VerificationRequest
 
 
 @admin.register(Subject)
@@ -14,11 +14,23 @@ class SubjectAdmin(admin.ModelAdmin):
 
 @admin.register(TutorProfile)
 class TutorProfileAdmin(admin.ModelAdmin):
-    list_display = ("display_name", "headline", "education_label", "is_verified", "city", "hourly_rate_min", "hourly_rate_max", "is_accepting")
+    """所有老師檔案的總覽（方便篩選）；要看一個人的全部資料，從「使用者」頁進去。"""
+
+    list_display = ("id", "user_number", "display_name", "headline", "education_label", "is_verified", "city", "hourly_rate_min", "hourly_rate_max", "is_accepting")
+    list_display_links = ("id", "display_name")
+    list_select_related = ("user__profile",)
     list_filter = ("is_verified", "is_accepting", "education_level", "city", "teaching_mode", "subjects")
     search_fields = ("user__username", "user__profile__display_name", "headline", "school", "department")
     filter_horizontal = ("subjects",)
     readonly_fields = ("created_at", "updated_at")
+
+    @admin.display(description="使用者 ID", ordering="user_id")
+    def user_number(self, tutor):
+        return tutor.user_id
+
+    @admin.display(description="名稱")
+    def display_name(self, tutor):
+        return tutor.display_name
 
     @admin.display(description="學歷")
     def education_label(self, tutor):
@@ -57,7 +69,7 @@ class VerificationRequestAdmin(admin.ModelAdmin):
             done += 1
         return done
 
-    @admin.action(description="通過：給老師「已認證」標章，並刪除證件檔案")
+    @admin.action(description="通過：給老師「學歷已認證」標章，並刪除證件檔案")
     def approve(self, request, queryset):
         done = self._finish(request, queryset, VerificationRequest.Status.APPROVED)
         self.message_user(request, f"已通過 {done} 筆申請。", messages.SUCCESS)

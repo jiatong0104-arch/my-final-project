@@ -10,7 +10,7 @@ wheels/
 .venv
 
 .env
-db.sqlite3
+db.sqlite3*
 
 # 使用者上傳的檔案（不進 Git）
 media/

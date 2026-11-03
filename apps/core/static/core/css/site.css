@@ -38,3 +38,12 @@ body {
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto !important; } * { transition: none !important; animation: none !important; } }
 html { scroll-behavior: smooth; }
 :where(.form-body input[type=radio], .form-body input[type=checkbox]) { accent-color: #C2362E; }
+/* 「學｜師」各一半的標誌：外框左藍右紅，中間一條虛線 */
+.logo-split { position: relative; border: 2px solid; border-color: #2547B5 #C2362E #C2362E #2547B5; }
+.logo-split::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; pointer-events: none;
+  background: repeating-linear-gradient(0deg, #5B6475 0 4px, transparent 4px 8px); opacity: .5;
+}
+/* 左右滑動的櫥窗：隱藏捲軸，但還是可以用手指、觸控板或箭頭捲動 */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
